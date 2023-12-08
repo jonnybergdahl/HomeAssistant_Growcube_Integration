@@ -1,6 +1,5 @@
 {
     "name": "Elecrow GrowCube",
-    "documentation": "https://github.com/jonnybergdahl/HomeAssistant_Growcube_Integration",
     "render_readme": true,
     "country": "SE"
   }
