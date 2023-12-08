@@ -13,11 +13,7 @@
       "@jonnybergdahl"
     ],
     "authors": [
-      {
-        "name": "Jonny Bergdahl",
-        "email": "github@bergdahl.org",
-        "url": "https://github.com/jonnybergdahl"
-      }
+      "@jonnybergdahl"
     ],
     "homepage": "https://github.com/jonnybergdahl/HomeAssistant_Growcube_Integration",
     "issues": "https://github.com/jonnybergdahl/HomeAssistant_Growcube_Integration/issues",
