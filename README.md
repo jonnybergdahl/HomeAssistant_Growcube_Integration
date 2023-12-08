@@ -10,7 +10,7 @@ Install the integration using HACS:
 1. Open the Home Assistant web interface and navigate to the HACS store.
 2. Click on the "Integrations" tab.
 3. Click on the three dots in the top right corner and select "Custom repositories".
-4. Enter the URL (`https://github.com/jonnybergdahl/homeassistant_growcube`) and select "Integration" as the category.
+4. Enter the URL (`https://github.com/jonnybergdahl/HomeAssistant_Growcube_Integration`) and select "Integration" as the category.
 5. Click "Add".
 6. Once the repository has been added, you should see the Elecrow Growcube integration listed in the HACS store.
 7. Click on the integration and then click "Install".
