@@ -1,0 +1,9 @@
+water_plant:
+  description: Water a plant for a specified duration on a specified channel
+  fields:
+    channel:
+      description: Channel on which the plant is located
+      example: 'A'
+    duration:
+      description: Duration for which to water the plant
+      example: '5'

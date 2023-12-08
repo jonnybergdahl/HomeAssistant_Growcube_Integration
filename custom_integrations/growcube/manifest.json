@@ -1,0 +1,17 @@
+{
+    "domain": "growcube",
+    "name": "Elecrow Growcube",
+    "codeowners": ["@jonnybergdahl"],
+    "config_flow": true,
+    "config": {
+      "host_name": "string"
+    },
+    "dependencies": [],
+    "documentation": "https://github.com/jonnybergdahl/homeassistant_growcube",
+    "issue_tracker": "https://github.com/jonnybergdahl/homeassistant_growcube/issues",
+    "iot_class": "local_push",
+    "requirements": [
+      "growcube-client==1.0.11"
+    ],
+    "version": "0.9.0"
+  }
