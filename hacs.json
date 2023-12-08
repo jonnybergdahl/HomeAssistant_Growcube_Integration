@@ -21,11 +21,11 @@
     ],
     "homepage": "https://github.com/jonnybergdahl/HomeAssistant_Growcube_Integration",
     "issues": "https://github.com/jonnybergdahl/HomeAssistant_Growcube_Integration/issues",
-    "logo": "https://github.com/jonnybergdahl/HomeAssistant_Growcube_Integration/blob/master/images/Elecrow_logo_png",
+    "logo": "https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/Elecrow_logo.png",
     "topics": [
       "smart watering",
       "growcube",
       "elecrow"
     ],
-    "country": "Sweden",
+    "country": "Sweden"
   }
