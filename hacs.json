@@ -1,27 +1,6 @@
 {
     "name": "Elecrow GrowCube",
-    "description": "An integration for the Elecrow GrowCube Smart Watering system.",
-    "domain": "growcube",
     "documentation": "https://github.com/jonnybergdahl/HomeAssistant_Growcube_Integration",
-    "version": "0.9.0",
-    "config_flow": true,
     "render_readme": true,
-    "requirements": [
-      "growcube-client==1.0.11"
-    ],
-    "codeowners": [
-      "@jonnybergdahl"
-    ],
-    "authors": [
-      "@jonnybergdahl"
-    ],
-    "homepage": "https://github.com/jonnybergdahl/HomeAssistant_Growcube_Integration",
-    "issues": "https://github.com/jonnybergdahl/HomeAssistant_Growcube_Integration/issues",
-    "logo": "https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/Elecrow_logo.png",
-    "topics": [
-      "smart watering",
-      "growcube",
-      "elecrow"
-    ],
     "country": "SE"
   }
