@@ -58,7 +58,7 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
             "name": "GrowCube " + self.device_id,
             "identifiers": {(DOMAIN, self.model.device_id)},
             "manufacturer": "Elecrow",
-            "model": "Growcube",
+            "model": "GrowCube",
             "sw_version": self.model.version
         }
 
