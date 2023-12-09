@@ -25,7 +25,7 @@ class GrowcubeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return self._show_error(errors)
 
         # Show the form to the user.
-        return self._async_show_form()
+        return self._show_form()
 
     async def _async_validate_user_input(self, user_input):
         """Validate the user input."""
@@ -41,7 +41,7 @@ class GrowcubeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return errors
 
-    async def _async_show_form(self, errors=None):
+    def _show_form(self, errors=None):
         """Show the form to the user."""
         return self.async_show_form(
             step_id="user",
@@ -51,6 +51,6 @@ class GrowcubeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors
         )
 
-    async def _async_show_error(self, errors):
+    def _show_error(self, errors):
         """Show an error message to the user."""
-        return await self._async_show_form(errors)
+        return self._show_form(errors)

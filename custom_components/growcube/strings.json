@@ -2,7 +2,8 @@
   "title": "GrowCube",
   "config": {
     "step": {
-      "user": {
+      "init": {
+        "title": "Select GrowCube device",
         "data": {
           "host": "Host"
         }
