@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 from growcube_client import GrowcubeClient, GrowcubeReport, Channel
 from growcube_client import (WaterStateGrowcubeReport,
@@ -65,12 +65,45 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         return self.model
 
-    async def connect(self):
-        await self.client.connect()
+    async def connect(self) -> Tuple[bool, str]:
+        result, error = await self.client.connect()
+        if not result:
+            return False, error
+
         # Wait for the device to send back the DeviceVersionGrowcubeReport
         while not self.model.device_id:
             await asyncio.sleep(0.1)
         _LOGGER.debug("Growcube device id: %s", self.model.device_id)
+        return True, ""
+
+    @staticmethod
+    async def get_device_id(host: str) -> tuple[bool, str]:
+        """ This is used in the config flow to check for a valid device """
+        device_id = ""
+
+        def _handle_device_id_report(report: GrowcubeReport):
+            if isinstance(report, DeviceVersionGrowcubeReport):
+                nonlocal device_id
+                device_id = report.device_id
+
+        async def _check_device_id_assigned():
+            nonlocal device_id
+            while not device_id:
+                await asyncio.sleep(0.1)
+
+        client = GrowcubeClient(host, _handle_device_id_report)
+        result, error = await client.connect()
+        if not result:
+            return False, error
+
+        try:
+            await asyncio.wait_for(_check_device_id_assigned(), timeout=2)
+            client.disconnect()
+        except asyncio.TimeoutError:
+            client.disconnect()
+            return False, 'Timed out waiting for device ID'
+
+        return True, device_id
 
     def on_connected(self, host: str) -> None:
         _LOGGER.debug(f"Connection to {host} established")

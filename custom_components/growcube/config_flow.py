@@ -1,56 +1,58 @@
 """Config flow for the Growcube integration."""
+from typing import Optional, Dict
+
 import voluptuous as vol
 import asyncio
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.const import CONF_HOST
-from growcube_client import GrowcubeClient
 
+from . import GrowcubeDataCoordinator
 from .const import DOMAIN
+
+DATA_SCHEMA = {
+    vol.Required(CONF_HOST): str,
+}
+
 
 class GrowcubeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Growcube config flow."""
+    VERSION = 1
 
     async def async_step_user(self, user_input=None):
         """Handle a flow initialized by the user."""
 
-        if user_input is not None:
-            # Validate the user input.
-            errors = await self._async_validate_user_input(user_input)
-            if not errors:
-                # User input is valid, create a new config entry.
-                return self.async_create_entry(title=user_input[CONF_HOST], data=user_input)
-            else:
-                # User input is invalid, show an error message.
-                return self._show_error(errors)
+        if not user_input:
+            return await self._show_form()
 
-        # Show the form to the user.
-        return self._show_form()
+        # Validate the user input.
+        errors, device_id = await self._async_validate_user_input(user_input)
+        if errors:
+            # return self._show_form(errors)
+            return await self._show_form(errors)
 
-    async def _async_validate_user_input(self, user_input):
+        await self.async_set_unique_id(device_id)
+        self._abort_if_unique_id_configured(updates=user_input)
+
+        return self.async_create_entry(title=user_input[CONF_HOST],
+                                       data=user_input)
+
+    async def _async_validate_user_input(self, user_input) -> tuple[Dict, Optional[str]]:
         """Validate the user input."""
         errors = {}
-        try:
-            client = GrowcubeClient(user_input[CONF_HOST], None)
-            await asyncio.wait_for(client.connect(), timeout=10)
-            client.disconnect()
-        except asyncio.TimeoutError:
-            errors[CONF_HOST] = "Connection timed out"
-        except OSError:
-            errors[CONF_HOST] = "Unable to connect to host"
+        device_id = ""
+        result, value = await asyncio.wait_for(GrowcubeDataCoordinator.get_device_id(user_input[CONF_HOST]), timeout=4)
+        if not result:
+            errors[CONF_HOST] = value
+        else:
+            device_id = value
 
-        return errors
+        return errors, device_id
 
-    def _show_form(self, errors=None):
+    async def _show_form(self, errors=None):
         """Show the form to the user."""
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema({
-                vol.Required(CONF_HOST): str
-            }),
-            errors=errors
+            data_schema=vol.Schema(DATA_SCHEMA),
+            errors=errors if errors else {}
         )
-
-    def _show_error(self, errors):
-        """Show an error message to the user."""
-        return self._show_form(errors)
