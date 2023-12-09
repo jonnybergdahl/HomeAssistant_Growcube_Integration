@@ -1,6 +1,6 @@
 {
     "domain": "growcube",
-    "name": "Elecrow Growcube",
+    "name": "Elecrow GrowCube",
     "codeowners": ["@jonnybergdahl"],
     "config_flow": true,
     "config": {
