@@ -1,7 +1,7 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
 # Elecrow Growcube integration for Home Assistant
-Home Assistant integration for the [https://www.elecrow.com/growcube-gardening-plants-smart-watering-kit-device.html](Elecrow Growcube), a plant watering device.
+Home Assistant integration for the [Elecrow Growcube](https://www.elecrow.com/growcube-gardening-plants-smart-watering-kit-device.html), a plant watering device.
 
 ## Installation
 
