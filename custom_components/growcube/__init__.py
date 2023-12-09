@@ -39,9 +39,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: dict):
     device_entry = registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, data_coordinator.model.device_id)},
-        name=f"Growcube " + data_coordinator.device_id,
+        name=f"GrowCube " + data_coordinator.device_id,
         manufacturer="Elecrow",
-        model="Growcube",
+        model="GrowCube",
         sw_version=data_coordinator.model.version
     )
 
