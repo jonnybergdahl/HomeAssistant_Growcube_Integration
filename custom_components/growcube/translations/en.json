@@ -5,7 +5,7 @@
       "user": {
         "description": "Select GrowCube device",
         "data": {
-          "host": "[%key:common::config_flow::data::host%]"
+          "host": "Address"
         },
         "data_description": {
           "host": "The hostname or IP address of the GrowCube device."
