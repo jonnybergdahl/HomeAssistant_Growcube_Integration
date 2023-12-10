@@ -35,7 +35,7 @@ class GrowcubeDataModel:
 
         self.device_lock_state: int = False
         self.water_state: int = True
-        self.sensor_state: List[int] = [True, True, True, True]
+        self.sensor_state: List[int] = [False, False, False, False]
         self.pump_lock_state: List[int] = [False, False, False, False]
 
         self.pump_open: List[bool] = [False, False, False, False]
@@ -58,7 +58,7 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
             "name": "GrowCube " + self.device_id,
             "identifiers": {(DOMAIN, self.model.device_id)},
             "manufacturer": "Elecrow",
-            "model": "GrowCube",
+            "model": "Growcube",
             "sw_version": self.model.version
         }
 
@@ -119,31 +119,49 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
     def handle_report(self, report: GrowcubeReport):
         """Handle a report from the Growcube."""
         if isinstance(report, DeviceVersionGrowcubeReport):
+            _LOGGER.debug(f"Device device_id: {report.device_id}, version {report.version}")
             self.model.version = report.version
             self.set_device_id(report.device_id)
         elif isinstance(report, WaterStateGrowcubeReport):
+            _LOGGER.debug(f"Water state {report.water_warning}")
             self.model.water_state = not report.water_warning
         elif isinstance(report, MoistureHumidityStateGrowcubeReport):
-            _LOGGER.debug(f"humidity %s, temperature %s, moisture %s",
+            _LOGGER.debug(f"Sensor reading, channel %s, humidity %s, temperature %s, moisture %s",
+                          report.channel,
                           report.humidity,
                           report.temperature,
                           report.moisture)
             self.model.humidity = report.humidity
             self.model.temperature = report.temperature
-            self.model.moisture[report.channel.value] = report.moisture
+            self.model.moisture[report.channel.value] = report.moisture if not self.model.sensor_state[report.channel.value] else None
         elif isinstance(report, PumpOpenGrowcubeReport):
+            _LOGGER.debug(f"Pump open, channel {report.channel}")
             self.model.pump_open[report.channel.value] = True
         elif isinstance(report, PumpCloseGrowcubeReport):
+            _LOGGER.debug(f"Pump closed, channel {report.channel}")
             self.model.pump_open[report.channel.value] = False
         elif isinstance(report, CheckSensorGrowcubeReport):
             # Investigate this one
             pass
         elif isinstance(report, CheckPumpBlockedGrowcubeReport):
+            _LOGGER.debug(f"Pump blocked, channel {report.channel}")
             self.model.pump_lock_state[report.channel.value] = True
         elif isinstance(report, CheckSensorNotConnectedGrowcubeReport):
+            _LOGGER.debug(f"Check sensor, channel {report.channel}" )
             self.model.sensor_state[report.channel.value] = True
+            self.model.moisture[report.channel.value] = None
         elif isinstance(report, LockStateGrowcubeReport):
+            _LOGGER.debug(f"Lock state, {report.lock_state}")
             self.model.device_lock_state = report.lock_state
+            if not report.lock_state:
+                self.model.sensor_state[0] = False
+                self.model.sensor_state[1] = False
+                self.model.sensor_state[2] = False
+                self.model.sensor_state[3] = False
+                self.model.pump_lock_state[0] = False
+                self.model.pump_lock_state[1] = False
+                self.model.pump_lock_state[2] = False
+                self.model.pump_lock_state[3] = False
 
         for entity in self.entities:
             entity.async_schedule_update_ha_state(True)
