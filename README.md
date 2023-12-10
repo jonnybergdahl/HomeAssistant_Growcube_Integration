@@ -3,6 +3,9 @@
 # Elecrow GrowCube integration for Home Assistant
 Home Assistant integration for the [Elecrow GrowCube](https://www.elecrow.com/growcube-gardening-plants-smart-watering-kit-device.html), a smart plant watering device.
 
+> Please note that a Growcube device can only be connected to one client at a time. That means you 
+> will not be able to connect using the phone app while Home Assistant is running the integration.
+
 The integration adds sensors for temperature, humidity and four sensors for moisture. It adds four controls for watering, 
 this activates the pump for 5 seconds for the given channel.
 
