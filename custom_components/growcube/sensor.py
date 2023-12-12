@@ -102,7 +102,7 @@ class MoistureSensor(SensorEntity):
 
     @property
     def icon(self):
-        return "mdi:waves"
+        return "mdi:cup-water"
 
     @callback
     def _handle_coordinator_update(self) -> None:
