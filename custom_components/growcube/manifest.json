@@ -11,7 +11,7 @@
     "issue_tracker": "https://github.com/jonnybergdahl/homeassistant_growcube/issues",
     "iot_class": "local_push",
     "requirements": [
-      "growcube-client==1.0.14"
+      "growcube-client==1.0.13"
     ],
-    "version": "0.9.1"
+    "version": "0.9.2"
   }
