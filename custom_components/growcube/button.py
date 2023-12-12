@@ -34,7 +34,7 @@ class WaterPlantButton(ButtonEntity):
 
     @property
     def icon(self):
-        return "mdi:water-pump"
+        return "mdi:watering-can"
 
     async def async_press(self):
         await self._coordinator.water_plant(self._channel)

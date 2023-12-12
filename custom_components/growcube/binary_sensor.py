@@ -80,7 +80,7 @@ class WaterStateSensor(BinarySensorEntity):
         if self.is_on:
             return "mdi:water-alert"
         else:
-            return "mdi:water"
+            return "mdi:water-check"
 
     @property
     def is_on(self):
@@ -162,9 +162,9 @@ class SensorFaultStateSensor(BinarySensorEntity):
     @property
     def icon(self):
         if self.is_on:
-            return "mdi:pump-off"
+            return "mdi:thermometer-probe-off"
         else:
-            return "mdi:pump"
+            return "mdi:thermometer-probe"
 
     @property
     def is_on(self):
