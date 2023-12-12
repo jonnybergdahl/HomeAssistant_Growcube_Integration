@@ -9,15 +9,15 @@ Home Assistant integration for the [Elecrow GrowCube](https://www.elecrow.com/gr
 The integration adds sensors for temperature, humidity and four sensors for moisture. It adds four controls for watering, 
 this activates the pump for 5 seconds for the given channel.
 
-![integration1.png](images%2Fintegration1.png)
+![integration1.png](/images/integration1.png)
 
 It also adds diagnostics sensors such as device lock, sensor disconnect warnings and pump blocked warnings.
 
-![integration2.png](images%2Fintegration2.png)
+![integration2.png](/images/integration2.png)
 
 The integration also publishes a service for watering, to be used in automations.
 
-![integration3.png](images%2Fintegration3.png)
+![integration3.png](/images/integration3.png)
 
 Use channel names A-D and a duration value in seconds.
 
