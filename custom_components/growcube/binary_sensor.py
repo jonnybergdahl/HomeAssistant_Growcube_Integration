@@ -35,7 +35,7 @@ class LockedStateSensor(BinarySensorEntity):
         self._coordinator.entities.append(self)
         self._attr_unique_id = f"{coordinator.model.device_id}_locked"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
-        self._attr_name = f"Device Locked"
+        self._attr_name = f"Device locked"
         self._attr_device_class = BinarySensorDeviceClass.LOCK
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_native_value = coordinator.model.device_lock_state
@@ -66,7 +66,7 @@ class WaterStateSensor(BinarySensorEntity):
         self._coordinator.entities.append(self)
         self._attr_unique_id = f"{coordinator.model.device_id}_water_level"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
-        self._attr_name = f"Water Level"
+        self._attr_name = f"Water level"
         self._attr_device_class = BinarySensorDeviceClass.PROBLEM
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_native_value = coordinator.model.device_lock_state
@@ -106,7 +106,7 @@ class PumpLockedStateSensor(BinarySensorEntity):
         self._channel = channel
         self._attr_unique_id = f"{coordinator.model.device_id}_pump_" + self._channel_id[channel] + "_locked"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
-        self._attr_name = f"Pump " + self._channel_name[channel] + " Locked"
+        self._attr_name = f"Pump " + self._channel_name[channel] + " state"
         self._attr_device_class = BinarySensorDeviceClass.PROBLEM
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_native_value = coordinator.model.pump_lock_state[self._channel]
