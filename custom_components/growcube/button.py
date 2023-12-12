@@ -24,7 +24,7 @@ class WaterPlantButton(ButtonEntity):
     def __init__(self, coordinator, channel: int):
         self._coordinator = coordinator
         self._channel = channel
-        self._attr_name = "Water Plant " + self._channel_name[channel]
+        self._attr_name = "Water plant " + self._channel_name[channel]
         self._attr_unique_id = f"{coordinator.model.device_id}_water_plant_" + self._channel_id[channel]
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
 
