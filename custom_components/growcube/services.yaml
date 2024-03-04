@@ -7,3 +7,16 @@ water_plant:
     duration:
       description: Duration for which to water the plant
       example: '5'
+
+set_watering_mode:
+  description: Set up watering mode
+  fields:
+    channel:
+      description: Channel on which plant is located
+      example: 'A'
+    min:
+      description: Min moisture level
+      example: 10
+    max:
+      description: Max moisture level
+      example: 50

@@ -15,17 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the Growcube sensors."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
-
-    sensors = [
-        TemperatureSensor(coordinator),
-        HumiditySensor(coordinator),
-        MoistureSensor(coordinator, 0),
-        MoistureSensor(coordinator, 1),
-        MoistureSensor(coordinator, 2),
-        MoistureSensor(coordinator, 3),
-    ]
-
-    async_add_entities(sensors, True)
+    async_add_entities(coordinator.sensors, True)
 
 
 class TemperatureSensor(CoordinatorEntity, SensorEntity):
@@ -45,14 +35,12 @@ class TemperatureSensor(CoordinatorEntity, SensorEntity):
         return self._coordinator.model.device_info
 
     @callback
-    def _handle_coordinator_update(self) -> None:
-        _LOGGER.debug("Update temperature %s", self._coordinator.model.temperature)
-        self._attr_native_value = self._coordinator.model.temperature
-        self.async_write_ha_state()
-
-    async def async_added_to_hass(self):
-        """When the entity is added to hass."""
-        self.async_on_remove(self._coordinator.async_add_listener(self._handle_coordinator_update))
+    def update(self, temperature: int) -> None:
+        _LOGGER.debug("Update temperature %s", temperature)
+        if self._coordinator.model.temperature != temperature:
+            self._coordinator.model.temperature = temperature
+            self._attr_native_value = self._coordinator.model.temperature
+            self.async_write_ha_state()
 
 
 class HumiditySensor(SensorEntity):
@@ -76,9 +64,13 @@ class HumiditySensor(SensorEntity):
         self._attr_native_value = self._coordinator.model.humidity
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self):
-        """When the entity is added to hass."""
-        self.async_on_remove(self._coordinator.async_add_listener(self._handle_coordinator_update))
+    @callback
+    def update(self, humidity: int) -> None:
+        _LOGGER.debug("Update humidity %s", humidity)
+        if self._coordinator.model.humidity != humidity:
+            self._coordinator.model.humidity = humidity
+            self._attr_native_value = humidity
+            self.async_write_ha_state()
 
 class MoistureSensor(SensorEntity):
     _channel_name = ['A', 'B', 'C', 'D']
@@ -105,11 +97,9 @@ class MoistureSensor(SensorEntity):
         return "mdi:cup-water"
 
     @callback
-    def _handle_coordinator_update(self) -> None:
-        _LOGGER.debug("Update moisture %s", self._coordinator.model.moisture[self._channel])
-        self._attr_native_value = self._coordinator.model.moisture[self._channel]
-        self.async_write_ha_state()
-
-    async def async_added_to_hass(self):
-        """When the entity is added to hass."""
-        self.async_on_remove(self._coordinator.async_add_listener(self._handle_coordinator_update))
+    def update(self, moisture: int) -> None:
+        _LOGGER.debug("Update moisture[%s] %s", self._channel, moisture)
+        if self._coordinator.model.moisture[self._channel] != moisture:
+            self._coordinator.model.moisture[self._channel] = moisture
+            self._attr_native_value = moisture
+            self.async_write_ha_state()
