@@ -25,12 +25,12 @@ class WaterPlantButton(ButtonEntity):
         self._coordinator = coordinator
         self._channel = channel
         self._attr_name = "Water plant " + self._channel_name[channel]
-        self._attr_unique_id = f"{coordinator.model.device_id}_water_plant_" + self._channel_id[channel]
+        self._attr_unique_id = f"{coordinator.data.device_id}_water_plant_" + self._channel_id[channel]
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
 
     @property
     def device_info(self) -> DeviceInfo | None:
-        return self._coordinator.model.device_info
+        return self._coordinator.data.device_info
 
     @property
     def icon(self):
