@@ -45,3 +45,6 @@ Install the integration using HACS:
 
 And that's it! Once you've added your GrowCube device, you should be able to see its status and control it from the Home Assistant web interface.
 
+## Getting help
+
+You can reach me in [#jonnys-place](https://discord.gg/SeHKWPu9Cw) on Brian Lough's Discord.
