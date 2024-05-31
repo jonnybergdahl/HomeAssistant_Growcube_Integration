@@ -145,7 +145,7 @@ class PumpLockedStateSensor(BinarySensorEntity):
         self._channel = channel
         self._attr_unique_id = f"{coordinator.data.device_id}_pump_" + self._channel_id[channel] + "_locked"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
-        self._attr_name = f"Pump " + self._channel_name[channel] + "lock state"
+        self._attr_name = f"Pump " + self._channel_name[channel] + " lock state"
         self._attr_device_class = BinarySensorDeviceClass.PROBLEM
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_native_value = coordinator.data.pump_lock_state[self._channel]
