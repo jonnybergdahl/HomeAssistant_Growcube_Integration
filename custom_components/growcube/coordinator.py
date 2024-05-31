@@ -125,7 +125,7 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
             self.set_device_id(report.device_id)
         elif isinstance(report, WaterStateGrowcubeReport):
             _LOGGER.debug(f"Water state {report.water_warning}")
-            self.data.water_state = report.water_warning
+            self.data.water_state = not report.water_warning
         elif isinstance(report, MoistureHumidityStateGrowcubeReport):
             _LOGGER.debug(f"Sensor reading, channel %s, humidity %s, temperature %s, moisture %s",
                           report.channel,
