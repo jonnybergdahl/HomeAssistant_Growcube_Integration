@@ -1,7 +1,7 @@
 import asyncio
 from typing import Optional, List, Tuple
 
-from growcube_client import GrowcubeClient, GrowcubeReport, Channel
+from growcube_client import GrowcubeClient, GrowcubeReport, Channel, WateringMode
 from growcube_client import (WaterStateGrowcubeReport,
                              DeviceVersionGrowcubeReport,
                              MoistureHumidityStateGrowcubeReport,
@@ -10,7 +10,9 @@ from growcube_client import (WaterStateGrowcubeReport,
                              CheckSensorGrowcubeReport,
                              CheckPumpBlockedGrowcubeReport,
                              CheckSensorNotConnectedGrowcubeReport,
+                             CheckSensorLockGrowcubeReport,
                              LockStateGrowcubeReport)
+from growcube_client import WateringModeCommand
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.const import STATE_UNAVAILABLE, STATE_OK, STATE_PROBLEM, STATE_LOCKED, STATE_OPEN, STATE_CLOSED
 import logging
@@ -110,8 +112,8 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
         _LOGGER.debug(f"Connection to {host} established")
 
     def on_disconnected(self, host: str) -> None:
-        _LOGGER.debug(f"Connection to {host} lost")
-        self.hass.states.async_set(DOMAIN + '.' + self.entity_id, STATE_UNAVAILABLE)
+        _LOGGER.debug(f"{self.data.device_id}: Connection to {host} lost")
+        self.hass.states.async_set(DOMAIN + '.' + self.data.device_id, STATE_UNAVAILABLE)
 
     def disconnect(self) -> None:
         """Disconnect from the Growcube device."""
@@ -124,10 +126,10 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
             self.data.version = report.version
             self.set_device_id(report.device_id)
         elif isinstance(report, WaterStateGrowcubeReport):
-            _LOGGER.debug(f"Water state {report.water_warning}")
+            _LOGGER.debug(f"{self.data.device_id}: Water state {report.water_warning}")
             self.data.water_state = not report.water_warning
         elif isinstance(report, MoistureHumidityStateGrowcubeReport):
-            _LOGGER.debug(f"Sensor reading, channel %s, humidity %s, temperature %s, moisture %s",
+            _LOGGER.debug(f"{self.data.device_id}: Sensor reading, channel %s, humidity %s, temperature %s, moisture %s",
                           report.channel,
                           report.humidity,
                           report.temperature,
@@ -136,30 +138,32 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
             self.data.temperature = report.temperature
             self.data.moisture[report.channel.value] = report.moisture
         elif isinstance(report, PumpOpenGrowcubeReport):
-            _LOGGER.debug(f"Pump open, channel {report.channel}")
+            _LOGGER.debug(f"{self.data.device_id}: Pump open, channel {report.channel}")
             self.data.pump_open[report.channel.value] = True
         elif isinstance(report, PumpCloseGrowcubeReport):
-            _LOGGER.debug(f"Pump closed, channel {report.channel}")
+            _LOGGER.debug(f"{self.data.device_id}: Pump closed, channel {report.channel}")
             self.data.pump_open[report.channel.value] = False
         elif isinstance(report, CheckSensorGrowcubeReport):
             # Investigate this one
             pass
-        elif isinstance(report, CheckPumpBlockedGrowcubeReport):
-            _LOGGER.debug(f"Pump blocked, channel {report.channel}")
-            self.data.pump_lock_state[report.channel] = True
+        elif isinstance(report, CheckSensorLockGrowcubeReport):
+            _LOGGER.debug(f"{self.data.device_id}: Pump blocked, channel {report.channel}")
+            self.data.pump_lock_state[report.channel.value] = True
         elif isinstance(report, CheckSensorNotConnectedGrowcubeReport):
-            _LOGGER.debug(f"Check sensor, channel {report.channel}")
-            self.data.sensor_state_sensors[report.channel.value] = True
+            _LOGGER.debug(f"{self.data.device_id}: Check sensor, channel {report.channel}")
+            self.data.sensor_state[report.channel.value] = True
             #self.moisture_sensors[report.channel.value].update(None)
         elif isinstance(report, LockStateGrowcubeReport):
-            _LOGGER.debug(f"Lock state, {report.lock_state}")
+            _LOGGER.debug(f"{self.data.device_id}: Lock state, {report.lock_state}")
             self.data.device_lock_state = report.lock_state
         #self.async_set_updated_data(self.model)
+
 
     async def water_plant(self, channel: int) -> None:
         await self.client.water_plant(Channel(channel), 5)
 
-    async def handle_water_plant(self, call: ServiceCall):
+
+   async def handle_water_plant(self, call: ServiceCall):
         # Validate channel
         channel_str = call.data.get('channel')
         duration_str = call.data.get('duration')
@@ -182,4 +186,34 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
 
         channel = Channel(channel_names.index(channel_str))
 
+        _LOGGER.debug("Service water_plant called, %s, %s", channel_str, duration_str)
         await self.client.water_plant(channel, duration)
+
+    async def handle_set_watering_mode(self, call: ServiceCall):
+        channel_str = call.data.get('channel')
+        min_value = call.data.get('min_value')
+        max_value = call.data.get('max_value')
+        channel_names = ['A', 'B', 'C', 'D']
+
+        # Validate data
+        if channel_str not in channel_names:
+            _LOGGER.error("Invalid channel specified for set_watering_mode: %s", channel_str)
+            return
+
+        if min_value <= 0 or min_value > 100:
+            _LOGGER.error("Invalid value specified for min_value: %s", min_value_str)
+            return
+
+        if max_value <=0 or max_value > 100:
+            _LOGGER.error("Invalid value specified for max_value: %s", max_value_str)
+            return
+
+        if max_value <= min_value:
+            _LOGGER.error("Invalid values specified, max_value must be bigger than min_value")
+            return
+
+        channel = Channel(channel_names.index(channel_str))
+        command = WateringModeCommand(channel, WateringMode.Smart, min_value, max_value)
+
+        _LOGGER.debug("Service set_watering_mode called, %s, %i, %i", channel_str, min_value, max_value)
+        self.client.send_command(command)

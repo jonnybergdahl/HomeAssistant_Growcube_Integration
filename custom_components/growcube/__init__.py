@@ -50,6 +50,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: dict):
     hass.services.async_register(DOMAIN,
                                  f"growcube_{data_coordinator.device_id}_water_plant",
                                  data_coordinator.handle_water_plant)
+    hass.services.async_register(DOMAIN,
+                                 f"growcube_{data_coordinator.device_id}_set_watering_mode",
+                                 data_coordinator.handle_set_watering_mode)
 
     return True
 
