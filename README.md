@@ -6,20 +6,49 @@ Home Assistant integration for the [Elecrow GrowCube](https://www.elecrow.com/gr
 > Please note that a Growcube device can only be connected to one client at a time. That means you 
 > will not be able to connect using the phone app while Home Assistant is running the integration.
 
+## Device
+
+![device1.png](https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/device1.png)
+
+## Sensors 
+
 The integration adds sensors for temperature, humidity and four sensors for moisture. It adds four controls for watering, 
 this activates the pump for 5 seconds for the given channel.
 
-![integration1.png](https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/integration1.png)
+![sensors1.png](https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/sensors1.png)
 
-It also adds diagnostics sensors such as device lock, sensor disconnect warnings and pump blocked warnings.
+## Diagnostics
 
-![integration2.png](https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/integration2.png)
+The diagnostics sensors includes things such as device lock, sensor disconnect warnings and pump blocked warnings.
 
-The integration also publishes a service for watering, to be used in automations.
+![diagnostics1.png](https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/diagnostics1.png)
 
-![integration3.png](https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/integration3.png)
+## Controls
+
+There are controls to let you manually water a plant. 
+
+![controls1.png](https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/controls1.png)
+
+## Services
+
+There are also services for manual watering and setup of automatic watering mode.
+
+### Watering
+
+The integration publishes a service for watering, to be used in automations.
+
+![service1.png](https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/service1.png)
 
 Use channel names A-D and a duration value in seconds.
+
+### Set watering mode
+
+The integration publishes a service for the automatic watering, to be used to setup min and max
+moisture levels for the plant.
+
+![service2.png](https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/service2.png)
+
+Use channel names A-D and moisture percentages for min_vale and max_value.
 
 ## Installation
 
