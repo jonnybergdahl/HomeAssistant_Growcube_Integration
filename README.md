@@ -77,3 +77,9 @@ And that's it! Once you've added your GrowCube device, you should be able to see
 ## Getting help
 
 You can reach me in [#jonnys-place](https://discord.gg/SeHKWPu9Cw) on Brian Lough's Discord.
+
+# TODO
+
+ - Add a `ReqSyncTime` call to set time after connecting to the device
+ - Add/Rename the diagnostics sensors to adhere to the last reverse engineering findings
+ - Add reconnect logic after connection lost event
