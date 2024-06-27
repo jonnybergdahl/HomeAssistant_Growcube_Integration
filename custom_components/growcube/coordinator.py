@@ -12,7 +12,8 @@ from growcube_client import (WaterStateGrowcubeReport,
                              CheckPumpBlockedGrowcubeReport,
                              CheckSensorNotConnectedGrowcubeReport,
                              CheckSensorLockGrowcubeReport,
-                             LockStateGrowcubeReport)
+                             LockStateGrowcubeReport,
+                             CheckOutletLockGrowcubeReport)
 from growcube_client import WateringModeCommand, SyncTimeCommand
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.const import STATE_UNAVAILABLE, STATE_OK, STATE_PROBLEM, STATE_LOCKED, STATE_OPEN, STATE_CLOSED
@@ -28,21 +29,25 @@ _LOGGER = logging.getLogger(__name__)
 
 class GrowcubeDataModel:
     def __init__(self, host: str):
+        ## Device
         self.host: str = host
         self.version: str = ""
         self.device_id: Optional[str] = None
         self.device_info: Optional[DeviceInfo] = None
 
+        # Sensors
         self.temperature: Optional[int] = None
         self.humidity: Optional[int] = None
         self.moisture: List[Optional[int]] = [None, None, None, None]
-
-        self.device_lock_state: int = False
-        self.water_state: int = True
-        self.sensor_state: List[int] = [False, False, False, False]
-        self.pump_lock_state: List[int] = [False, False, False, False]
-
         self.pump_open: List[bool] = [False, False, False, False]
+
+        # Diagnostics
+        self.device_locked: int = False
+        self.water_warning: int = False
+        self.sensor_abnormal: List[int] = [False, False, False, False]
+        self.sensor_disconnected: List[int] = [False, False, False, False]
+        self.outlet_blocked_state: List[int] = [False, False, False, False]
+        self.outlet_locked_state: List[int] = [False, False, False, False]
 
 
 class GrowcubeDataCoordinator(DataUpdateCoordinator):
@@ -79,7 +84,7 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
             await asyncio.sleep(0.1)
         _LOGGER.debug("Growcube device id: %s", self.data.device_id)
         time_command = SyncTimeCommand(datetime.now())
-        _LOGGER.debug("Sending SyncTimeCommand")
+        _LOGGER.debug(f"{self.data.device_id} Sending SyncTimeCommand")
         self.client.send_command(time_command)
         return True, ""
 
@@ -125,13 +130,18 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
 
     def handle_report(self, report: GrowcubeReport):
         """Handle a report from the Growcube."""
+        # 24 - RepDeviceVersion
         if isinstance(report, DeviceVersionGrowcubeReport):
             _LOGGER.debug(f"Device device_id: {report.device_id}, version {report.version}")
             self.data.version = report.version
             self.set_device_id(report.device_id)
+
+        # 20 - RepWaterState
         elif isinstance(report, WaterStateGrowcubeReport):
             _LOGGER.debug(f"{self.data.device_id}: Water state {report.water_warning}")
-            self.data.water_state = not report.water_warning
+            self.data.water_warning = report.water_warning
+
+        # 21 - RepSTHSate
         elif isinstance(report, MoistureHumidityStateGrowcubeReport):
             _LOGGER.debug(f"{self.data.device_id}: Sensor reading, channel %s, humidity %s, temperature %s, moisture %s",
                           report.channel,
@@ -141,26 +151,42 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
             self.data.humidity = report.humidity
             self.data.temperature = report.temperature
             self.data.moisture[report.channel.value] = report.moisture
+
+        # 26 - RepPumpOpen
         elif isinstance(report, PumpOpenGrowcubeReport):
             _LOGGER.debug(f"{self.data.device_id}: Pump open, channel {report.channel}")
             self.data.pump_open[report.channel.value] = True
+
+        # 27 - RepPumpClose
         elif isinstance(report, PumpCloseGrowcubeReport):
             _LOGGER.debug(f"{self.data.device_id}: Pump closed, channel {report.channel}")
             self.data.pump_open[report.channel.value] = False
+
+        # 28 - RepCheckSenSorNotConnected
         elif isinstance(report, CheckSensorGrowcubeReport):
-            # Investigate this one
-            pass
+            _LOGGER.debug(f"{self.data.device_id}: Sensor abnormal, channel {report.channel}")
+            self.data.sensor_abnormal[report.channel.value] = True
+
+        # 29 - Pump channel blocked
         elif isinstance(report, CheckSensorLockGrowcubeReport):
             _LOGGER.debug(f"{self.data.device_id}: Pump blocked, channel {report.channel}")
-            self.data.pump_lock_state[report.channel.value] = True
+            self.data.outlet_blocked_state[report.channel.value] = True
+
+        # 30 - RepCheckSenSorNotConnect
         elif isinstance(report, CheckSensorNotConnectedGrowcubeReport):
             _LOGGER.debug(f"{self.data.device_id}: Check sensor, channel {report.channel}")
-            self.data.sensor_state[report.channel.value] = True
+            self.data.sensor_disconnected[report.channel.value] = True
             # self.moisture_sensors[report.channel.value].update(None)
+
+        # 33 - RepLockstate
         elif isinstance(report, LockStateGrowcubeReport):
             _LOGGER.debug(f"{self.data.device_id}: Lock state, {report.lock_state}")
             self.data.device_lock_state = report.lock_state
-        # self.async_set_updated_data(self.model)
+
+        # 34 - ReqCheckSenSorLock
+        elif isinstance(report, CheckOutletLockGrowcubeReport):
+            _LOGGER.debug(f"{self.data.device_id}: Check outlet, channel {report.channel}")
+            self.data.outlet_locked_state[report.channel.value] = True
 
     async def water_plant(self, channel: int) -> None:
         await self.client.water_plant(Channel(channel), 5)

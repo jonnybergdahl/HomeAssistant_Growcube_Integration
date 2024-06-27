@@ -12,33 +12,41 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the Growcube sensors."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([LockedStateSensor(coordinator),
-                        WaterStateSensor(coordinator),
+    async_add_entities([DeviceLockedSensor(coordinator),
+                        WaterWarningSensor(coordinator),
                         PumpOpenStateSensor(coordinator, 0),
                         PumpOpenStateSensor(coordinator, 1),
                         PumpOpenStateSensor(coordinator, 2),
                         PumpOpenStateSensor(coordinator, 3),
-                        PumpLockedStateSensor(coordinator, 0),
-                        PumpLockedStateSensor(coordinator, 1),
-                        PumpLockedStateSensor(coordinator, 2),
-                        PumpLockedStateSensor(coordinator, 3),
-                        SensorFaultStateSensor(coordinator, 0),
-                        SensorFaultStateSensor(coordinator, 1),
-                        SensorFaultStateSensor(coordinator, 2),
-                        SensorFaultStateSensor(coordinator, 3)
+                        OutletLockedSensor(coordinator, 0),
+                        OutletLockedSensor(coordinator, 1),
+                        OutletLockedSensor(coordinator, 2),
+                        OutletLockedSensor(coordinator, 3),
+                        OutletBlockedSensor(coordinator, 0),
+                        OutletBlockedSensor(coordinator, 1),
+                        OutletBlockedSensor(coordinator, 2),
+                        OutletBlockedSensor(coordinator, 3),
+                        SensorFaultSensor(coordinator, 0),
+                        SensorFaultSensor(coordinator, 1),
+                        SensorFaultSensor(coordinator, 2),
+                        SensorFaultSensor(coordinator, 3),
+                        SensorDisconnectedSensor(coordinator, 0),
+                        SensorDisconnectedSensor(coordinator, 1),
+                        SensorDisconnectedSensor(coordinator, 2),
+                        SensorDisconnectedSensor(coordinator, 3),
                         ], True)
 
 
-class LockedStateSensor(BinarySensorEntity):
+class DeviceLockedSensor(BinarySensorEntity):
     def __init__(self, coordinator: GrowcubeDataCoordinator):
         self._coordinator = coordinator
         self._coordinator.entities.append(self)
-        self._attr_unique_id = f"{coordinator.data.device_id}_locked"
+        self._attr_unique_id = f"{coordinator.data.device_id}_device_locked"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
         self._attr_name = f"Device locked"
         self._attr_device_class = BinarySensorDeviceClass.LOCK
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        self._attr_native_value = coordinator.data.device_lock_state
+        self._attr_native_value = coordinator.data.device_locked
 
     @property
     def device_info(self) -> DeviceInfo | None:
@@ -47,26 +55,26 @@ class LockedStateSensor(BinarySensorEntity):
     @property
     def is_on(self):
         """Return True if the binary sensor is on."""
-        return not self._coordinator.data.device_lock_state
+        return self._coordinator.data.device_locked
 
     @callback
     def update(self) -> None:
-        _LOGGER.debug("Update device_lock_state %s", self._coordinator.data.device_lock_state)
-        if self._coordinator.data.device_lock_state != self._attr_native_value:
-            self._attr_native_value = self._coordinator.data.device_lock_state
+        _LOGGER.debug("Update device_locked %s", self._coordinator.data.device_locked)
+        if self._coordinator.data.device_locked != self._attr_native_value:
+            self._attr_native_value = self._coordinator.data.device_locked
             self.schedule_update_ha_state()
 
 
-class WaterStateSensor(BinarySensorEntity):
+class WaterWarningSensor(BinarySensorEntity):
     def __init__(self, coordinator: GrowcubeDataCoordinator):
         self._coordinator = coordinator
         self._coordinator.entities.append(self)
-        self._attr_unique_id = f"{coordinator.data.device_id}_water_level"
+        self._attr_unique_id = f"{coordinator.data.device_id}_water_warning"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
-        self._attr_name = f"Water level"
+        self._attr_name = f"Water warning"
         self._attr_device_class = BinarySensorDeviceClass.PROBLEM
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        self._attr_native_value = coordinator.data.device_lock_state
+        self._attr_native_value = coordinator.data.water_warning
 
     @property
     def device_info(self) -> DeviceInfo | None:
@@ -81,13 +89,13 @@ class WaterStateSensor(BinarySensorEntity):
 
     @property
     def is_on(self):
-        return self._coordinator.data.water_state
+        return self._coordinator.data.water_warning
 
     @callback
     def update(self) -> None:
-        _LOGGER.debug("Update water_state %s", self._coordinator.data.water_state)
-        if self._coordinator.data.water_state != self._attr_native_value:
-            self._attr_native_value = self._coordinator.data.water_state
+        _LOGGER.debug("Update water_state %s", self._coordinator.data.water_warning)
+        if self._coordinator.data.water_warning != self._attr_native_value:
+            self._attr_native_value = self._coordinator.data.water_warning
             self.schedule_update_ha_state()
 
     #async def async_added_to_hass(self):
@@ -135,7 +143,7 @@ class PumpOpenStateSensor(BinarySensorEntity):
             self.schedule_update_ha_state()
 
 
-class PumpLockedStateSensor(BinarySensorEntity):
+class OutletLockedSensor(BinarySensorEntity):
     _channel_name = ['A', 'B', 'C', 'D']
     _channel_id = ['a', 'b', 'c', 'd']
 
@@ -143,12 +151,12 @@ class PumpLockedStateSensor(BinarySensorEntity):
         self._coordinator = coordinator
         self._coordinator.entities.append(self)
         self._channel = channel
-        self._attr_unique_id = f"{coordinator.data.device_id}_pump_" + self._channel_id[channel] + "_locked"
+        self._attr_unique_id = f"{coordinator.data.device_id}_outlet_" + self._channel_id[channel] + "_locked"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
-        self._attr_name = f"Pump " + self._channel_name[channel] + " lock state"
+        self._attr_name = f"Outlet " + self._channel_name[channel] + " locked"
         self._attr_device_class = BinarySensorDeviceClass.PROBLEM
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        self._attr_native_value = coordinator.data.pump_lock_state[self._channel]
+        self._attr_native_value = coordinator.data.outlet_locked_state[self._channel]
 
     @property
     def device_info(self) -> DeviceInfo | None:
@@ -164,19 +172,19 @@ class PumpLockedStateSensor(BinarySensorEntity):
     @property
     def is_on(self):
         """Return True if the binary sensor is on."""
-        return self._coordinator.data.pump_lock_state[self._channel]
+        return self._coordinator.data.outlet_locked_state[self._channel]
 
     @callback
     def update(self) -> None:
         _LOGGER.debug("Update pump_lock_state[%s] %s",
                       self._channel,
-                      self._coordinator.data.pump_lock_state[self._channel])
-        if self._coordinator.data.pump_lock_state[self._channel] != self._attr_native_value:
-            self._attr_native_value = self._coordinator.data.pump_lock_state[self._channel]
+                      self._coordinator.data.outlet_locked_state[self._channel])
+        if self._coordinator.data.outlet_locked_state[self._channel] != self._attr_native_value:
+            self._attr_native_value = self._coordinator.data.outlet_locked_state[self._channel]
             self.schedule_update_ha_state()
 
 
-class SensorFaultStateSensor(BinarySensorEntity):
+class OutletBlockedSensor(BinarySensorEntity):
     _channel_name = ['A', 'B', 'C', 'D']
     _channel_id = ['a', 'b', 'c', 'd']
 
@@ -184,12 +192,53 @@ class SensorFaultStateSensor(BinarySensorEntity):
         self._coordinator = coordinator
         self._coordinator.entities.append(self)
         self._channel = channel
-        self._attr_unique_id = f"{coordinator.data.device_id}_sensor_" + self._channel_id[channel] + "_locked"
+        self._attr_unique_id = f"{coordinator.data.device_id}_outlet_" + self._channel_id[channel] + "_blocked"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
-        self._attr_name = f"Sensor " + self._channel_name[channel] + " state"
+        self._attr_name = f"Outlet " + self._channel_name[channel] + " blocked"
         self._attr_device_class = BinarySensorDeviceClass.PROBLEM
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        self._attr_native_value = coordinator.data.sensor_state[self._channel]
+        self._attr_native_value = coordinator.data.outlet_blocked_state[self._channel]
+
+    @property
+    def device_info(self) -> DeviceInfo | None:
+        return self._coordinator.data.device_info
+
+    @property
+    def icon(self):
+        if self.is_on:
+            return "mdi:water-pump-off"
+        else:
+            return "mdi:water-pump"
+
+    @property
+    def is_on(self):
+        """Return True if the binary sensor is on."""
+        return self._coordinator.data.outlet_blocked_state[self._channel]
+
+    @callback
+    def update(self) -> None:
+        _LOGGER.debug("Update pump_lock_state[%s] %s",
+                      self._channel,
+                      self._coordinator.data.outlet_blocked_state[self._channel])
+        if self._coordinator.data.outlet_blocked_state[self._channel] != self._attr_native_value:
+            self._attr_native_value = self._coordinator.data.outlet_blocked_state[self._channel]
+            self.schedule_update_ha_state()
+
+
+class SensorFaultSensor(BinarySensorEntity):
+    _channel_name = ['A', 'B', 'C', 'D']
+    _channel_id = ['a', 'b', 'c', 'd']
+
+    def __init__(self, coordinator: GrowcubeDataCoordinator, channel: int) -> None:
+        self._coordinator = coordinator
+        self._coordinator.entities.append(self)
+        self._channel = channel
+        self._attr_unique_id = f"{coordinator.data.device_id}_sensor_" + self._channel_id[channel] + "_fault"
+        self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
+        self._attr_name = f"Sensor " + self._channel_name[channel] + " fault"
+        self._attr_device_class = BinarySensorDeviceClass.PROBLEM
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+        self._attr_native_value = coordinator.data.sensor_abnormal[self._channel]
 
     @property
     def device_info(self) -> DeviceInfo | None:
@@ -205,14 +254,54 @@ class SensorFaultStateSensor(BinarySensorEntity):
     @property
     def is_on(self):
         """Return True if the binary sensor is on."""
-        return self._coordinator.data.sensor_state[self._channel]
+        return self._coordinator.data.sensor_abnormal[self._channel]
 
     @callback
     def update(self) -> None:
         _LOGGER.debug("Update sensor_state[%s] %s",
                       self._channel,
-                      self._coordinator.data.sensor_state[self._channel])
-        if self._coordinator.data.sensor_state[self._channel] != self._attr_native_value:
-            self._attr_native_value = self._coordinator.data.sensor_state[self._channel]
+                      self._coordinator.data.sensor_abnormal[self._channel])
+        if self._coordinator.data.sensor_abnormal[self._channel] != self._attr_native_value:
+            self._attr_native_value = self._coordinator.data.sensor_abnormal[self._channel]
             self.schedule_update_ha_state()
 
+
+class SensorDisconnectedSensor(BinarySensorEntity):
+    _channel_name = ['A', 'B', 'C', 'D']
+    _channel_id = ['a', 'b', 'c', 'd']
+
+    def __init__(self, coordinator: GrowcubeDataCoordinator, channel: int) -> None:
+        self._coordinator = coordinator
+        self._coordinator.entities.append(self)
+        self._channel = channel
+        self._attr_unique_id = f"{coordinator.data.device_id}_sensor_" + self._channel_id[channel] + "_disconnected"
+        self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
+        self._attr_name = f"Sensor " + self._channel_name[channel] + " disconnected"
+        self._attr_device_class = BinarySensorDeviceClass.PROBLEM
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+        self._attr_native_value = coordinator.data.sensor_disconnected[self._channel]
+
+    @property
+    def device_info(self) -> DeviceInfo | None:
+        return self._coordinator.data.device_info
+
+    @property
+    def icon(self):
+        if self.is_on:
+            return "mdi:thermometer-probe-off"
+        else:
+            return "mdi:thermometer-probe"
+
+    @property
+    def is_on(self):
+        """Return True if the binary sensor is on."""
+        return self._coordinator.data.sensor_disconnected[self._channel]
+
+    @callback
+    def update(self) -> None:
+        _LOGGER.debug("Update sensor_state[%s] %s",
+                      self._channel,
+                      self._coordinator.data.sensor_disconnected[self._channel])
+        if self._coordinator.data.sensor_disconnected[self._channel] != self._attr_native_value:
+            self._attr_native_value = self._coordinator.data.sensor_disconnected[self._channel]
+            self.schedule_update_ha_state()
