@@ -80,6 +80,5 @@ You can reach me in [#jonnys-place](https://discord.gg/SeHKWPu9Cw) on Brian Loug
 
 # TODO
 
- - Add a `ReqSyncTime` call to set time after connecting to the device
  - Add/Rename the diagnostics sensors to adhere to the last reverse engineering findings
  - Add reconnect logic after connection lost event

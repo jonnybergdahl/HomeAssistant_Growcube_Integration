@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 from typing import Optional, List, Tuple
 
 from growcube_client import GrowcubeClient, GrowcubeReport, Channel, WateringMode
@@ -12,7 +13,7 @@ from growcube_client import (WaterStateGrowcubeReport,
                              CheckSensorNotConnectedGrowcubeReport,
                              CheckSensorLockGrowcubeReport,
                              LockStateGrowcubeReport)
-from growcube_client import WateringModeCommand
+from growcube_client import WateringModeCommand, SyncTimeCommand
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.const import STATE_UNAVAILABLE, STATE_OK, STATE_PROBLEM, STATE_LOCKED, STATE_OPEN, STATE_CLOSED
 import logging
@@ -77,6 +78,9 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
         while not self.data.device_id:
             await asyncio.sleep(0.1)
         _LOGGER.debug("Growcube device id: %s", self.data.device_id)
+        time_command = SyncTimeCommand(datetime.now())
+        _LOGGER.debug("Sending SyncTimeCommand")
+        self.client.send_command(time_command)
         return True, ""
 
     @staticmethod
@@ -152,18 +156,16 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
         elif isinstance(report, CheckSensorNotConnectedGrowcubeReport):
             _LOGGER.debug(f"{self.data.device_id}: Check sensor, channel {report.channel}")
             self.data.sensor_state[report.channel.value] = True
-            #self.moisture_sensors[report.channel.value].update(None)
+            # self.moisture_sensors[report.channel.value].update(None)
         elif isinstance(report, LockStateGrowcubeReport):
             _LOGGER.debug(f"{self.data.device_id}: Lock state, {report.lock_state}")
             self.data.device_lock_state = report.lock_state
-        #self.async_set_updated_data(self.model)
-
+        # self.async_set_updated_data(self.model)
 
     async def water_plant(self, channel: int) -> None:
         await self.client.water_plant(Channel(channel), 5)
 
-
-   async def handle_water_plant(self, call: ServiceCall):
+    async def handle_water_plant(self, call: ServiceCall):
         # Validate channel
         channel_str = call.data.get('channel')
         duration_str = call.data.get('duration')
