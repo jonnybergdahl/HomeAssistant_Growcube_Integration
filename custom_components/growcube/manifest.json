@@ -13,5 +13,5 @@
     "requirements": [
       "growcube-client==1.0.15"
     ],
-    "version": "0.9.4"
+    "version": "0.9.5"
 }
