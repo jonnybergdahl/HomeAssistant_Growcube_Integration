@@ -44,7 +44,7 @@ class DeviceLockedSensor(BinarySensorEntity):
         self._attr_unique_id = f"{coordinator.data.device_id}_device_locked"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
         self._attr_name = f"Device locked"
-        self._attr_device_class = BinarySensorDeviceClass.LOCK
+        self._attr_device_class = BinarySensorDeviceClass.PROBLEM
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_native_value = coordinator.data.device_locked
 
