@@ -192,6 +192,7 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
                 report.device_id,
                 report.version
             )
+            self.reset_sensor_data()
             self.data.version = report.version
             self.set_device_id(report.device_id)
 
