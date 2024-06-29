@@ -3,7 +3,7 @@ from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from .coordinator import GrowcubeDataCoordinator
 from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
-from .const import DOMAIN
+from .const import DOMAIN, CHANNEL_NAME, CHANNEL_ID
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -98,21 +98,15 @@ class WaterWarningSensor(BinarySensorEntity):
             self._attr_native_value = self._coordinator.data.water_warning
             self.schedule_update_ha_state()
 
-    #async def async_added_to_hass(self):
-    #    self.async_on_remove(self._coordinator.async_add_listener(self._handle_coordinator_update))
-
 
 class PumpOpenStateSensor(BinarySensorEntity):
-    _channel_name = ['A', 'B', 'C', 'D']
-    _channel_id = ['a', 'b', 'c', 'd']
-
     def __init__(self, coordinator: GrowcubeDataCoordinator, channel: int) -> None:
         self._coordinator = coordinator
         self._coordinator.entities.append(self)
         self._channel = channel
-        self._attr_unique_id = f"{coordinator.data.device_id}_pump_" + self._channel_id[channel] + "_open"
+        self._attr_unique_id = f"{coordinator.data.device_id}_pump_" + CHANNEL_ID[channel] + "_open"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
-        self._attr_name = f"Pump " + self._channel_name[channel] + " open"
+        self._attr_name = f"Pump " + CHANNEL_NAME[channel] + " open"
         self._attr_device_class = BinarySensorDeviceClass.OPENING
         self._attr_native_value = coordinator.data.pump_open[self._channel]
         self._attr_entity_registry_enabled_default = False
@@ -144,16 +138,13 @@ class PumpOpenStateSensor(BinarySensorEntity):
 
 
 class OutletLockedSensor(BinarySensorEntity):
-    _channel_name = ['A', 'B', 'C', 'D']
-    _channel_id = ['a', 'b', 'c', 'd']
-
     def __init__(self, coordinator: GrowcubeDataCoordinator, channel: int) -> None:
         self._coordinator = coordinator
         self._coordinator.entities.append(self)
         self._channel = channel
-        self._attr_unique_id = f"{coordinator.data.device_id}_outlet_" + self._channel_id[channel] + "_locked"
+        self._attr_unique_id = f"{coordinator.data.device_id}_outlet_" + CHANNEL_ID[channel] + "_locked"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
-        self._attr_name = f"Outlet " + self._channel_name[channel] + " locked"
+        self._attr_name = f"Outlet " + CHANNEL_NAME[channel] + " locked"
         self._attr_device_class = BinarySensorDeviceClass.PROBLEM
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_native_value = coordinator.data.outlet_locked_state[self._channel]
@@ -185,16 +176,13 @@ class OutletLockedSensor(BinarySensorEntity):
 
 
 class OutletBlockedSensor(BinarySensorEntity):
-    _channel_name = ['A', 'B', 'C', 'D']
-    _channel_id = ['a', 'b', 'c', 'd']
-
     def __init__(self, coordinator: GrowcubeDataCoordinator, channel: int) -> None:
         self._coordinator = coordinator
         self._coordinator.entities.append(self)
         self._channel = channel
-        self._attr_unique_id = f"{coordinator.data.device_id}_outlet_" + self._channel_id[channel] + "_blocked"
+        self._attr_unique_id = f"{coordinator.data.device_id}_outlet_" + self.CHANNEL_ID[channel] + "_blocked"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
-        self._attr_name = f"Outlet " + self._channel_name[channel] + " blocked"
+        self._attr_name = f"Outlet " + CHANNEL_NAME[channel] + " blocked"
         self._attr_device_class = BinarySensorDeviceClass.PROBLEM
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_native_value = coordinator.data.outlet_blocked_state[self._channel]
@@ -226,16 +214,13 @@ class OutletBlockedSensor(BinarySensorEntity):
 
 
 class SensorFaultSensor(BinarySensorEntity):
-    _channel_name = ['A', 'B', 'C', 'D']
-    _channel_id = ['a', 'b', 'c', 'd']
-
     def __init__(self, coordinator: GrowcubeDataCoordinator, channel: int) -> None:
         self._coordinator = coordinator
         self._coordinator.entities.append(self)
         self._channel = channel
-        self._attr_unique_id = f"{coordinator.data.device_id}_sensor_" + self._channel_id[channel] + "_fault"
+        self._attr_unique_id = f"{coordinator.data.device_id}_sensor_" + CHANNEL_ID[channel] + "_fault"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
-        self._attr_name = f"Sensor " + self._channel_name[channel] + " fault"
+        self._attr_name = f"Sensor " + CHANNEL_NAME[channel] + " fault"
         self._attr_device_class = BinarySensorDeviceClass.PROBLEM
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_native_value = coordinator.data.sensor_abnormal[self._channel]
@@ -267,16 +252,13 @@ class SensorFaultSensor(BinarySensorEntity):
 
 
 class SensorDisconnectedSensor(BinarySensorEntity):
-    _channel_name = ['A', 'B', 'C', 'D']
-    _channel_id = ['a', 'b', 'c', 'd']
-
     def __init__(self, coordinator: GrowcubeDataCoordinator, channel: int) -> None:
         self._coordinator = coordinator
         self._coordinator.entities.append(self)
         self._channel = channel
-        self._attr_unique_id = f"{coordinator.data.device_id}_sensor_" + self._channel_id[channel] + "_disconnected"
+        self._attr_unique_id = f"{coordinator.data.device_id}_sensor_" + CHANNEL_ID[channel] + "_disconnected"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
-        self._attr_name = f"Sensor " + self._channel_name[channel] + " disconnected"
+        self._attr_name = f"Sensor " + CHANNEL_NAME[channel] + " disconnected"
         self._attr_device_class = BinarySensorDeviceClass.PROBLEM
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_native_value = coordinator.data.sensor_disconnected[self._channel]
