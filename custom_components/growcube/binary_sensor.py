@@ -59,7 +59,10 @@ class DeviceLockedSensor(BinarySensorEntity):
 
     @callback
     def update(self) -> None:
-        _LOGGER.debug("Update device_locked %s", self._coordinator.data.device_locked)
+        _LOGGER.debug("%s: Update device_locked %s",
+                      self._coordinator.data.device_id,
+                      self._coordinator.data.device_locked
+                      )
         if self._coordinator.data.device_locked != self._attr_native_value:
             self._attr_native_value = self._coordinator.data.device_locked
             self.schedule_update_ha_state()
@@ -93,7 +96,10 @@ class WaterWarningSensor(BinarySensorEntity):
 
     @callback
     def update(self) -> None:
-        _LOGGER.debug("Update water_state %s", self._coordinator.data.water_warning)
+        _LOGGER.debug("%s: Update water_state %s",
+                      self._coordinator.data.device_id,
+                      self._coordinator.data.water_warning
+                      )
         if self._coordinator.data.water_warning != self._attr_native_value:
             self._attr_native_value = self._coordinator.data.water_warning
             self.schedule_update_ha_state()
@@ -129,9 +135,11 @@ class PumpOpenStateSensor(BinarySensorEntity):
 
     @callback
     def update(self) -> None:
-        _LOGGER.debug("Update pump_state[%s] %s",
+        _LOGGER.debug("%s: Update pump_state[%s] %s",
+                      self._coordinator.data.device_id,
                       self._channel,
-                      self._coordinator.data.pump_open[self._channel])
+                      self._coordinator.data.pump_open[self._channel]
+                      )
         if self._coordinator.data.pump_open[self._channel] != self._attr_native_value:
             self._attr_native_value = self._coordinator.data.pump_open[self._channel]
             self.schedule_update_ha_state()
@@ -167,9 +175,11 @@ class OutletLockedSensor(BinarySensorEntity):
 
     @callback
     def update(self) -> None:
-        _LOGGER.debug("Update pump_lock_state[%s] %s",
+        _LOGGER.debug("%s: Update pump_lock_state[%s] %s",
+                      self._coordinator.data.device_id,
                       self._channel,
-                      self._coordinator.data.outlet_locked_state[self._channel])
+                      self._coordinator.data.outlet_locked_state[self._channel]
+                      )
         if self._coordinator.data.outlet_locked_state[self._channel] != self._attr_native_value:
             self._attr_native_value = self._coordinator.data.outlet_locked_state[self._channel]
             self.schedule_update_ha_state()
@@ -180,7 +190,7 @@ class OutletBlockedSensor(BinarySensorEntity):
         self._coordinator = coordinator
         self._coordinator.entities.append(self)
         self._channel = channel
-        self._attr_unique_id = f"{coordinator.data.device_id}_outlet_" + self.CHANNEL_ID[channel] + "_blocked"
+        self._attr_unique_id = f"{coordinator.data.device_id}_outlet_" + CHANNEL_ID[channel] + "_blocked"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
         self._attr_name = f"Outlet " + CHANNEL_NAME[channel] + " blocked"
         self._attr_device_class = BinarySensorDeviceClass.PROBLEM
@@ -205,9 +215,11 @@ class OutletBlockedSensor(BinarySensorEntity):
 
     @callback
     def update(self) -> None:
-        _LOGGER.debug("Update pump_lock_state[%s] %s",
+        _LOGGER.debug("%s: Update pump_lock_state[%s] %s",
+                      self._coordinator.data.device_id,
                       self._channel,
-                      self._coordinator.data.outlet_blocked_state[self._channel])
+                      self._coordinator.data.outlet_blocked_state[self._channel]
+                      )
         if self._coordinator.data.outlet_blocked_state[self._channel] != self._attr_native_value:
             self._attr_native_value = self._coordinator.data.outlet_blocked_state[self._channel]
             self.schedule_update_ha_state()
@@ -243,9 +255,11 @@ class SensorFaultSensor(BinarySensorEntity):
 
     @callback
     def update(self) -> None:
-        _LOGGER.debug("Update sensor_state[%s] %s",
+        _LOGGER.debug("%s: Update sensor_state[%s] %s",
+                      self._coordinator.data.device_id,
                       self._channel,
-                      self._coordinator.data.sensor_abnormal[self._channel])
+                      self._coordinator.data.sensor_abnormal[self._channel]
+                      )
         if self._coordinator.data.sensor_abnormal[self._channel] != self._attr_native_value:
             self._attr_native_value = self._coordinator.data.sensor_abnormal[self._channel]
             self.schedule_update_ha_state()
@@ -281,9 +295,11 @@ class SensorDisconnectedSensor(BinarySensorEntity):
 
     @callback
     def update(self) -> None:
-        _LOGGER.debug("Update sensor_state[%s] %s",
+        _LOGGER.debug("%s: Update sensor_state[%s] %s",
+                      self._coordinator.data.device_id,
                       self._channel,
-                      self._coordinator.data.sensor_disconnected[self._channel])
+                      self._coordinator.data.sensor_disconnected[self._channel]
+                      )
         if self._coordinator.data.sensor_disconnected[self._channel] != self._attr_native_value:
             self._attr_native_value = self._coordinator.data.sensor_disconnected[self._channel]
             self.schedule_update_ha_state()

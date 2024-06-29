@@ -4,7 +4,12 @@
 Home Assistant integration for the [Elecrow GrowCube](https://www.elecrow.com/growcube-gardening-plants-smart-watering-kit-device.html), a smart plant watering device.
 
 > Please note that a Growcube device can only be connected to one client at a time. That means you 
-> will not be able to connect using the phone app while Home Assistant is running the integration.
+> will not be able to connect using the phone app while Home Assistant is running the integration, 
+> or vice versa.
+
+## Getting help
+
+You can reach me at [#jonnys-place](https://discord.gg/SeHKWPu9Cw) on Brian Lough's Discord.
 
 ## Device
 
@@ -12,8 +17,7 @@ Home Assistant integration for the [Elecrow GrowCube](https://www.elecrow.com/gr
 
 ## Sensors 
 
-The integration adds sensors for temperature, humidity and four sensors for moisture. It adds four controls for watering, 
-this activates the pump for 5 seconds for the given channel.
+The integration adds sensors for temperature, humidity and four sensors for moisture.
 
 ![sensors1.png](https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/sensors1.png)
 
@@ -25,7 +29,7 @@ The diagnostics sensors includes things such as device lock, sensor disconnect w
 
 ## Controls
 
-There are controls to let you manually water a plant. 
+There are controls to let you manually water a plant. Thee will activate the pump for 5 seconds for a given outlet.
 
 ![controls1.png](https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/controls1.png)
 
@@ -74,11 +78,3 @@ Install the integration using HACS:
 
 And that's it! Once you've added your GrowCube device, you should be able to see its status and control it from the Home Assistant web interface.
 
-## Getting help
-
-You can reach me in [#jonnys-place](https://discord.gg/SeHKWPu9Cw) on Brian Lough's Discord.
-
-# TODO
-
- - Add/Rename the diagnostics sensors to adhere to the last reverse engineering findings
- - Add reconnect logic after connection lost event

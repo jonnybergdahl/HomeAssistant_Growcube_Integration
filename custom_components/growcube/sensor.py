@@ -4,7 +4,7 @@ from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from .const import DOMAIN
+from .const import DOMAIN, CHANNEL_ID, CHANNEL_NAME
 import logging
 
 from .coordinator import GrowcubeDataCoordinator
@@ -20,12 +20,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
                         MoistureSensor(coordinator, 0),
                         MoistureSensor(coordinator, 1),
                         MoistureSensor(coordinator, 2),
-                        MoistureSensor(coordinator, 3)], True)        
+                        MoistureSensor(coordinator, 3)], True)
 
 
 class TemperatureSensor(SensorEntity):
     def __init__(self, coordinator: GrowcubeDataCoordinator) -> None:
-        #super.__init__(coordinator)
         self._coordinator = coordinator
         self._coordinator.entities.append(self)
         self._attr_unique_id = f"{coordinator.data.device_id}" + "_temperature"
@@ -42,7 +41,11 @@ class TemperatureSensor(SensorEntity):
 
     @callback
     def update(self) -> None:
-        _LOGGER.debug("Update temperature %s", self._coordinator.data.temperature)
+        _LOGGER.debug(
+            "%s: Update temperature %s",
+            self._coordinator.data.device_id,
+            self._coordinator.data.temperature
+        )
         if self._coordinator.data.temperature != self.temperature:
             self._attr_native_value = self._coordinator.data.temperature
             self.schedule_update_ha_state()
@@ -65,23 +68,25 @@ class HumiditySensor(SensorEntity):
 
     @callback
     def update(self) -> None:
-        _LOGGER.debug("Update humidity %s", self._coordinator.data.humidity)
+        _LOGGER.debug(
+            "%s: Update humidity %s",
+            self._coordinator.data.device_id,
+            self._coordinator.data.humidity
+        )
         if self._coordinator.data.humidity != self._attr_native_value:
             self._attr_native_value = self._coordinator.data.humidity
             self.schedule_update_ha_state()
 
-class MoistureSensor(SensorEntity):
-    _channel_name = ['A', 'B', 'C', 'D']
-    _channel_id = ['a', 'b', 'c', 'd']
 
+class MoistureSensor(SensorEntity):
     def __init__(self, coordinator: GrowcubeDataCoordinator, channel: int) -> None:
         """Initialize the sensor."""
         self._coordinator = coordinator
         self._coordinator.entities.append(self)
         self._channel = channel
-        self._attr_unique_id = f"{coordinator.data.device_id}" + "_moisture_" + self._channel_id[self._channel]
+        self._attr_unique_id = f"{coordinator.data.device_id}" + "_moisture_" + CHANNEL_ID[self._channel]
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
-        self._attr_name = "Moisture " + self._channel_name[self._channel]
+        self._attr_name = "Moisture " + CHANNEL_NAME[self._channel]
         self._attr_native_unit_of_measurement = PERCENTAGE
         self._attr_device_class = SensorDeviceClass.MOISTURE
         self._attr_native_value = coordinator.data.moisture[self._channel]
@@ -96,7 +101,12 @@ class MoistureSensor(SensorEntity):
 
     @callback
     def update(self) -> None:
-        _LOGGER.debug("Update moisture[%s] %s", self._channel, self._coordinator.data.moisture[self._channel])
+        _LOGGER.debug(
+            "%s: Update moisture[%s] %s",
+            self._coordinator.data.device_id,
+            self._channel,
+            self._coordinator.data.moisture[self._channel]
+        )
         if self._coordinator.data.moisture[self._channel] != self._attr_native_value:
             self._attr_native_value = self._coordinator.data.moisture[self._channel]
             self.schedule_update_ha_state()

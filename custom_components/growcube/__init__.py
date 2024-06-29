@@ -56,6 +56,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: dict):
 
     return True
 
+
 async def async_unload_entry(hass: HomeAssistant, entry: dict):
     """Unload the Growcube entry."""
     client = hass.data[DOMAIN][entry.entry_id]
