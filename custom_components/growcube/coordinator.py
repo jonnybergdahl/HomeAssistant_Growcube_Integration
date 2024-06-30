@@ -105,6 +105,30 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
         self.client.send_command(time_command)
         return True, ""
 
+    async def reconnect(self) -> None:
+        if self.client.connected:
+            await self.client.disconnect()
+
+        if not self.shutting_down:
+            while True:
+                # Set flag to avoid handling in on_disconnected
+                self.shutting_down = True
+                result, error = await self.client.connect()
+                if result:
+                    _LOGGER.debug(
+                        "Reconnect to %s succeeded",
+                        self.data.host
+                    )
+                    self.shutting_down = False
+                    await asyncio.sleep(10)
+                    return
+
+                _LOGGER.debug(
+                    "Reconnect failed for %s with error '%s', retrying in 10 seconds",
+                    self.data.host,
+                    error)
+                await asyncio.sleep(10)
+
     @staticmethod
     async def get_device_id(host: str) -> tuple[bool, str]:
         """This is used in the config flow to check for a valid device"""
@@ -152,20 +176,8 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
                 "Device host %s went offline, will try to reconnect",
                 host
             )
-            while not self.shutting_down:
-                await asyncio.sleep(10)
-                result, error = await self.client.connect()
-                if not result:
-                    _LOGGER.debug(
-                        "Reconnect failed for %s with error '%s', retrying in 10 seconds",
-                        host,
-                        error)
-                else:
-                    _LOGGER.debug(
-                        "Reconnect to %s succeeded",
-                        host
-                    )
-                    return
+            loop = asyncio.get_event_loop()
+            loop.call_later(10, lambda: loop.create_task(self.reconnect()))
 
     def disconnect(self) -> None:
         self.shutting_down = True
@@ -263,7 +275,6 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
                 report.channel
             )
             self.data.sensor_disconnected[report.channel.value] = True
-            # self.moisture_sensors[report.channel.value].update(None)
 
         # 33 - RepLockstate
         elif isinstance(report, LockStateGrowcubeReport):
@@ -272,7 +283,12 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
                 self.data.device_id,
                 report.lock_state
             )
-            self.data.device_lock_state = report.lock_state
+            # Handle case where the button on the device was pressed, this should do a reconnect
+            # to read any problems still present
+            if not report.lock_state and self.data.device_locked:
+                self.reset_sensor_data()
+                self.reconnect()
+            self.data.device_locked = report.lock_state
 
         # 34 - ReqCheckSenSorLock
         elif isinstance(report, CheckOutletLockedGrowcubeReport):

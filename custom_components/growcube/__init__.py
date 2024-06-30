@@ -25,14 +25,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: dict):
         hass.data[DOMAIN][entry.entry_id] = data_coordinator
 
         # Wait for device to report id
-        while not data_coordinator.device_id:
-            await asyncio.sleep(0.1)
+        retries = 3
+        while not data_coordinator.device_id and retries > 0:
+            retries -= 1
+            await asyncio.sleep(0.5)
+
+        if retries == 0:
+            _LOGGER.error(
+                "Unable to read device id of %s, device is probably connected to another app",
+                host_name
+            )
+            return False
 
     except asyncio.TimeoutError:
-        _LOGGER.error("Connection timed out")
+        _LOGGER.error(
+            "Connection to %s timed out",
+            host_name
+        )
         return False
     except OSError:
-        _LOGGER.error("Unable to connect to host")
+        _LOGGER.error(
+            "Unable to connect to host %s",
+            host_name
+        )
         return False
 
     registry = device_registry.async_get(hass)
