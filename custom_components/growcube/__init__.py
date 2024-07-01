@@ -1,7 +1,8 @@
 """The Growcube integration."""
 import asyncio
 import logging
-
+import voluptuous as vol
+import homeassistant.helpers.config_validation as cv
 from homeassistant.const import CONF_HOST, Platform
 from .coordinator import GrowcubeDataCoordinator
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -10,6 +11,7 @@ from homeassistant.helpers import device_registry
 _LOGGER = logging.getLogger(__name__)
 
 from .const import *
+from .services import async_setup_services
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
 
@@ -61,14 +63,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: dict):
     )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    hass.services.async_register(DOMAIN,
-                                 f"growcube_{data_coordinator.device_id}_water_plant",
-                                 data_coordinator.handle_water_plant)
-    hass.services.async_register(DOMAIN,
-                                 f"growcube_{data_coordinator.device_id}_set_watering_mode",
-                                 data_coordinator.handle_set_watering_mode)
-
+    await async_setup_services(hass)
     return True
 
 

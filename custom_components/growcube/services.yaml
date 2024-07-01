@@ -1,22 +1,74 @@
 water_plant:
+  name: Water plant
   description: Water a plant for a specified duration on a specified channel
   fields:
+    device_id:
+      example: "fan.living_room_fan"
+      required: true
+      selector:
+        device:
+          integration: growcube
     channel:
+      name: Channel
       description: Channel on which the plant is located
-      example: 'A'
+      translation_key: "channel"
+      required: true
+      default: 'A'
+      selector:
+        select:
+          options:
+            - "A"
+            - "B"
+            - "C"
+            - "D"
     duration:
+      name: Duration
       description: Duration for which to water the plant
-      example: '5'
-
+      translation_key: "duration"
+      required: true
+      default: 5
+      selector:
+        number:
+          min: 5
+          max: 60
 set_watering_mode:
-  description: Set up watering mode
+  Name: Setup watering mode
+  description: Setup watering mode
   fields:
+    device_id:
+      example: "fan.living_room_fan"
+      required: true
+      selector:
+        device:
+          integration: growcube
     channel:
+      name: Channel
       description: Channel on which plant is located
+      translation_key: "channel"
+      required: true
       example: 'A'
-    min:
+      selector:
+        select:
+          options:
+            - "A"
+            - "B"
+            - "C"
+            - "D"
+    min_value:
+      name: "Min moisture"
       description: Min moisture level
+      required: true
       example: 10
-    max:
+      selector:
+        number:
+          min: 0
+          max: 100
+    max_value:
+      name: "Max moisture"
       description: Max moisture level
+      required: true
       example: 50
+      selector:
+        number:
+          min: 0
+          max: 100

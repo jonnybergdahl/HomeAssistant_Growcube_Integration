@@ -17,6 +17,7 @@ from growcube_client import (
 )
 from growcube_client import WateringModeCommand, SyncTimeCommand
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_OK,
@@ -302,90 +303,23 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
     async def water_plant(self, channel: int) -> None:
         await self.client.water_plant(Channel(channel), 5)
 
-    async def handle_water_plant(self, call: ServiceCall):
-        # Validate channel
-        channel_str = call.data.get("channel")
-        duration_str = call.data.get("duration")
-
-        # Validate data
-        if channel_str not in CHANNEL_NAME:
-            _LOGGER.error(
-                "%s: Invalid channel specified for water_plant: %s",
-                self.data.device_id,
-                channel_str
-            )
-            return
-
-        try:
-            duration = int(duration_str)
-        except ValueError:
-            _LOGGER.error("%s: Invalid duration '%s' for water_plant", self.device_id, duration_str)
-            return
-
-        if duration < 1 or duration > 60:
-            _LOGGER.error(
-                "%s: Invalid duration '%s' for water_plant, should be 1-60",
-                self.data.device_id,
-                duration
-            )
-            return
-
-        channel = Channel(CHANNEL_NAME.index(channel_str))
-
+    async def handle_water_plant(self, channel: Channel, duration: int) -> None:
         _LOGGER.debug(
             "%s: Service water_plant called, %s, %s",
             self.data.device_id,
-            channel_str,
-            duration_str
+            channel,
+            duration
         )
         await self.client.water_plant(channel, duration)
 
-    async def handle_set_watering_mode(self, call: ServiceCall):
-        # Set watering mode
-        channel_str = call.data.get("channel")
-        min_value = call.data.get("min_value")
-        max_value = call.data.get("max_value")
-        channel_names = ["A", "B", "C", "D"]
+    async def handle_set_watering_mode(self, channel: Channel, min_value: int, max_value: int) -> None:
 
-        # Validate data
-        if channel_str not in channel_names:
-            _LOGGER.error(
-                "%s: Invalid channel specified for set_watering_mode: %s",
-                self.data.device_id,
-                channel_str
-            )
-            return
 
-        if min_value <= 0 or min_value > 100:
-            _LOGGER.error(
-                "%s: Invalid value specified for min_value: %s",
-                self.data.device_id,
-                min_value
-            )
-            return
-
-        if max_value <= 0 or max_value > 100:
-            _LOGGER.error(
-                "%sInvalid value specified for max_value: %s",
-                self.data.device_id, max_value,
-                max_value
-            )
-            return
-
-        if max_value <= min_value:
-            _LOGGER.error(
-                "%s: Invalid values specified, max_value must be bigger than min_value",
-                self.data.device_id
-            )
-            return
-
-        channel = Channel(channel_names.index(channel_str))
         command = WateringModeCommand(channel, WateringMode.Smart, min_value, max_value)
-
         _LOGGER.debug(
             "%s: Service set_watering_mode called, %s, %s, %s",
             self.data.device_id,
-            channel_str,
+            channel,
             min_value,
             max_value,
         )
