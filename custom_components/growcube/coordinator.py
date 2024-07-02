@@ -15,7 +15,7 @@ from growcube_client import (
     LockStateGrowcubeReport,
     CheckOutletLockedGrowcubeReport,
 )
-from growcube_client import WateringModeCommand, SyncTimeCommand
+from growcube_client import WateringModeCommand, SyncTimeCommand, PlantEndCommand, ClosePumpCommand
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.const import (
@@ -312,15 +312,45 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
         )
         await self.client.water_plant(channel, duration)
 
-    async def handle_set_watering_mode(self, channel: Channel, min_value: int, max_value: int) -> None:
+    async def handle_set_smart_watering(self, channel: Channel,
+                                        all_day: bool,
+                                        min_moisture: int,
+                                        max_moisture: int) -> None:
 
-
-        command = WateringModeCommand(channel, WateringMode.Smart, min_value, max_value)
         _LOGGER.debug(
-            "%s: Service set_watering_mode called, %s, %s, %s",
+            "%s: Service set_smart_watering called, %s, %s, %s, %s",
             self.data.device_id,
             channel,
-            min_value,
-            max_value,
+            all_day,
+            min_moisture,
+            max_moisture,
         )
+
+        watering_mode = WateringMode.Smart if all_day else WateringMode.SmartOutside
+        command = WateringModeCommand(channel, watering_mode, min_moisture, max_moisture)
+        self.client.send_command(command)
+
+    async def handle_set_manual_watering(self, channel: Channel, duration: int, interval: int) -> None:
+
+        _LOGGER.debug(
+            "%s: Service set_manual_watering called, %s, %s, %s",
+            self.data.device_id,
+            channel,
+            duration,
+            interval,
+        )
+
+        command = WateringModeCommand(channel, WateringMode.Manual, interval, duration)
+        self.client.send_command(command)
+
+    async def handle_delete_watering(self, channel: Channel) -> None:
+
+        _LOGGER.debug(
+            "%s: Service delete_watering called, %s,",
+            self.data.device_id,
+            channel
+        )
+        command = PlantEndCommand(channel)
+        self.client.send_command(command)
+        command = ClosePumpCommand(channel)
         self.client.send_command(command)

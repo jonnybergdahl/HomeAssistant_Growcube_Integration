@@ -3,7 +3,6 @@ water_plant:
   description: Water a plant for a specified duration on a specified channel
   fields:
     device_id:
-      example: "fan.living_room_fan"
       required: true
       selector:
         device:
@@ -13,7 +12,7 @@ water_plant:
       description: Channel on which the plant is located
       translation_key: "channel"
       required: true
-      default: 'A'
+      example: 'A'
       selector:
         select:
           options:
@@ -27,16 +26,16 @@ water_plant:
       translation_key: "duration"
       required: true
       default: 5
+      example: 5
       selector:
         number:
           min: 5
           max: 60
-set_watering_mode:
-  Name: Setup watering mode
-  description: Setup watering mode
+set_smart_watering:
+  name: Smart watering
+  description: Setup smart watering
   fields:
     device_id:
-      example: "fan.living_room_fan"
       required: true
       selector:
         device:
@@ -54,21 +53,95 @@ set_watering_mode:
             - "B"
             - "C"
             - "D"
-    min_value:
+    all_day:
+      name: All day
+      description: Set to false for smart watering only outside of daylight
+      required: true
+      default: true
+      example: true
+      selector:
+        boolean:
+    min_moisture:
       name: "Min moisture"
       description: Min moisture level
       required: true
-      example: 10
+      default: 15
+      example: 15
       selector:
         number:
           min: 0
           max: 100
-    max_value:
+    max_moisture:
       name: "Max moisture"
       description: Max moisture level
       required: true
+      default: 50
       example: 50
       selector:
         number:
           min: 0
           max: 100
+set_scheduled_watering:
+  name: Scheduled watering
+  description: Setup scheduled watering
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: growcube
+    channel:
+      name: Channel
+      description: Channel on which plant is located
+      translation_key: "channel"
+      required: true
+      example: 'A'
+      selector:
+        select:
+          options:
+            - "A"
+            - "B"
+            - "C"
+            - "D"
+    duration:
+      name: Duration
+      description: Duration, seconds
+      required: true
+      default: 6
+      example: 6
+      selector:
+        number:
+          min: 0
+          max: 100
+    interval:
+      name: Interval
+      description: Interval, hours
+      required: true
+      default: 3
+      example: 3
+      selector:
+        number:
+          min: 1
+          max: 240
+delete_watering:
+  name: Delete watering
+  description: Delete watering mode
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: growcube
+    channel:
+      name: Channel
+      description: Channel on which plant is located
+      translation_key: "channel"
+      required: true
+      example: 'A'
+      selector:
+        select:
+          options:
+            - "A"
+            - "B"
+            - "C"
+            - "D"
