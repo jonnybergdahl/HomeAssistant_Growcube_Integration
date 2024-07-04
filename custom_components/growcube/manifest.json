@@ -3,9 +3,6 @@
     "name": "Elecrow GrowCube",
     "codeowners": ["@jonnybergdahl"],
     "config_flow": true,
-    "config": {
-      "host_name": "string"
-    },
     "dependencies": [],
     "documentation": "https://github.com/jonnybergdahl/homeassistant_growcube",
     "issue_tracker": "https://github.com/jonnybergdahl/homeassistant_growcube/issues",
