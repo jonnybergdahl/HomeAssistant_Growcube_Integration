@@ -10,7 +10,6 @@ water_plant:
     channel:
       name: Channel
       description: Channel on which the plant is located
-      translation_key: "channel"
       required: true
       example: 'A'
       selector:
@@ -23,7 +22,6 @@ water_plant:
     duration:
       name: Duration
       description: Duration for which to water the plant
-      translation_key: "duration"
       required: true
       default: 5
       example: 5
@@ -43,7 +41,6 @@ set_smart_watering:
     channel:
       name: Channel
       description: Channel on which plant is located
-      translation_key: "channel"
       required: true
       example: 'A'
       selector:
@@ -93,7 +90,6 @@ set_scheduled_watering:
     channel:
       name: Channel
       description: Channel on which plant is located
-      translation_key: "channel"
       required: true
       example: 'A'
       selector:
@@ -135,7 +131,6 @@ delete_watering:
     channel:
       name: Channel
       description: Channel on which plant is located
-      translation_key: "channel"
       required: true
       example: 'A'
       selector:

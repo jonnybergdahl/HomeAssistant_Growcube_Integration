@@ -1,8 +1,5 @@
 {
   "title": "GrowCube",
-  "channel": "Channel",
-  "min": "Min. value",
-  "max": "Max. value",
   "config": {
     "step": {
       "user": {
