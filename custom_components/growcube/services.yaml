@@ -3,6 +3,8 @@ water_plant:
   description: Water a plant for a specified duration on a specified channel
   fields:
     device_id:
+      name: Device
+      description: Growcube device
       required: true
       selector:
         device:
@@ -34,6 +36,8 @@ set_smart_watering:
   description: Setup smart watering
   fields:
     device_id:
+      name: Device
+      description: Growcube device
       required: true
       selector:
         device:
@@ -83,6 +87,8 @@ set_scheduled_watering:
   description: Setup scheduled watering
   fields:
     device_id:
+      name: Device
+      description: Growcube device
       required: true
       selector:
         device:
@@ -124,6 +130,8 @@ delete_watering:
   description: Delete watering mode
   fields:
     device_id:
+      name: Device
+      description: Growcube device
       required: true
       selector:
         device:

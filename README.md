@@ -7,6 +7,12 @@ Home Assistant integration for the [Elecrow GrowCube](https://www.elecrow.com/gr
 > will not be able to connect using the phone app while Home Assistant is running the integration, 
 > or vice versa.
 
+## Installing the integration
+
+Click the button to add this repository to HACS.
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=jonnybergdahl&category=Integration&repository=HomeAssistant_Growcube_Integration)
+
 ## Getting help
 
 You can reach me at [#jonnys-place](https://discord.gg/SeHKWPu9Cw) on Brian Lough's Discord.
