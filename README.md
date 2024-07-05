@@ -84,22 +84,37 @@ There are controls to let you manually water a plant. Thee will activate the pum
 
 ### Services
 
-There are also services for manual watering and setup of automatic watering mode.
+There are also services for manual watering and setup of automatic watering modes.
 
-#### Watering
+#### Water plant
 
-The integration publishes a service for watering, to be used in automations.
+This is a service for watering a plant, to be used in automations.
 
-![service1.png](https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/service1.png)
+![waterplant.png](https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/waterplant.png)
 
 Use channel names A-D and a duration value in seconds.
 
-#### Set watering mode
+#### Smart watering
 
-The integration publishes a service for the automatic watering, to be used to setup min and max
+This is a service to set smart watering for a plant, to be used to setup min and max
 moisture levels for the plant.
 
-![service2.png](https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/service2.png)
+![smartwatering.png](https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/smartwatering.png)
 
-Use channel names A-D and moisture percentages for min_vale and max_value.
+Use channel names A-D and set moisture percentages for min and max values. Use the All day switch to allow watering during daylight.
 
+#### Scheduled watering
+
+This a service to setup scheduled watering for a plant, to be used to setup a fixed interval and duration for watering. 
+
+![scheduledwatering.png](https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/scheduledwatering.png)
+
+Use channel names A-D, set a watering duration in seconds, and an interval in hours.
+
+#### Delete watering
+
+This is a service to remove smart or scheduled watering for a plant. 
+
+![deletewatering](https://raw.githubusercontent.com/jonnybergdahl/HomeAssistant_Growcube_Integration/main/images/deletewatering.png)
+
+Use channel named A-D.
