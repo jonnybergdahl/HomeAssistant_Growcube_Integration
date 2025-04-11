@@ -1,7 +1,7 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
 # Elecrow GrowCube integration for Home Assistant
-This is an asyncio Python library to communicate with [Elecrow GrowCube](https://shrsl.com/4qit4) devices.
+This is an integration for using [Elecrow GrowCube](https://shrsl.com/4qit4) devices in Home Assistant.
 __Disclosure__: This is an affiliate link for [Hands on Katie](https://handsonkatie.com). If you make a purchase through this link, she may earn a small commission at no additional cost to you.
 
 > Please note that a Growcube device can only be connected to one client at a time. That means you 
