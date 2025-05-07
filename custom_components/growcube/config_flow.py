@@ -1,11 +1,12 @@
 """Config flow for the Growcube integration."""
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 import voluptuous as vol
 import asyncio
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.const import CONF_HOST
+from homeassistant.data_entry_flow import FlowResult
 
 from . import GrowcubeDataCoordinator
 from .const import DOMAIN
@@ -19,7 +20,7 @@ class GrowcubeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Growcube config flow."""
     VERSION = 1
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Handle a flow initialized by the user."""
 
         if not user_input:
@@ -37,7 +38,7 @@ class GrowcubeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_create_entry(title=user_input[CONF_HOST],
                                        data=user_input)
 
-    async def _async_validate_user_input(self, user_input) -> tuple[Dict, Optional[str]]:
+    async def _async_validate_user_input(self, user_input: dict[str, Any]) -> tuple[Dict[str, str], Optional[str]]:
         """Validate the user input."""
         errors = {}
         device_id = ""
@@ -49,7 +50,7 @@ class GrowcubeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return errors, device_id
 
-    async def _show_form(self, errors=None):
+    async def _show_form(self, errors: dict[str, str] | None = None) -> FlowResult:
         """Show the form to the user."""
         return self.async_show_form(
             step_id="user",

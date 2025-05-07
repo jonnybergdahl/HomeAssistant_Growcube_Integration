@@ -18,7 +18,7 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 @callback
-async def async_setup_services(hass):
+async def async_setup_services(hass: HomeAssistant) -> None:
 
     async def async_call_water_plant_service(service_call: ServiceCall) -> None:
         await _async_handle_water_plant(hass, service_call.data)
@@ -81,7 +81,7 @@ async def _async_handle_water_plant(hass: HomeAssistant, data: Mapping[str, Any]
     coordinator, device = _get_coordinator(hass, data)
 
     if coordinator is None:
-        _LOGGER.warning(f"Unable to find coordinator for {data[ATTR_DEVICE_ID]}")
+        _LOGGER.warning("Unable to find coordinator for %s", data[ATTR_DEVICE_ID])
         return
 
     channel_str = data["channel"]
@@ -91,7 +91,7 @@ async def _async_handle_water_plant(hass: HomeAssistant, data: Mapping[str, Any]
     if channel_str not in CHANNEL_NAME:
         _LOGGER.error(
             "%s: %s - Invalid channel specified: %s",
-            id,
+            device,
             SERVICE_WATER_PLANT,
             channel_str
         )
@@ -102,16 +102,16 @@ async def _async_handle_water_plant(hass: HomeAssistant, data: Mapping[str, Any]
     except ValueError:
         _LOGGER.error(
             "%s: %s - Invalid duration '%s'",
-            id,
+            device,
             SERVICE_WATER_PLANT,
             duration_str
         )
-        raise HomeAssistantError(f"Invalid duration '{duration_str} specified'")
+        raise HomeAssistantError(f"Invalid duration '{duration_str}' specified")
 
     if duration < 1 or duration > 60:
         _LOGGER.error(
             "%s: %s - Invalid duration '%s', should be 1-60",
-            id,
+            device,
             SERVICE_WATER_PLANT,
             duration
         )
@@ -127,7 +127,7 @@ async def _async_handle_set_smart_watering(hass: HomeAssistant, data: Mapping[st
     coordinator, device = _get_coordinator(hass, data)
 
     if coordinator is None:
-        _LOGGER.error(f"Unable to find coordinator for {device}")
+        _LOGGER.error("Unable to find coordinator for %s", device)
         return
 
     channel_str = data[ARGS_CHANNEL]
@@ -168,8 +168,8 @@ async def _async_handle_set_smart_watering(hass: HomeAssistant, data: Mapping[st
             "%s: %s - Invalid values specified, max_moisture %s must be bigger than min_moisture %s",
             device,
             SERVICE_SET_SMART_WATERING,
-            min_moisture,
-            max_moisture
+            max_moisture,
+            min_moisture
         )
         raise HomeAssistantError(
             f"Invalid values specified, max_moisture {max_moisture} must be bigger than min_moisture {min_moisture}")
@@ -183,7 +183,7 @@ async def _async_handle_set_scheduled_watering(hass: HomeAssistant, data: Mappin
     coordinator, device = _get_coordinator(hass, data)
 
     if coordinator is None:
-        _LOGGER.error(f"Unable to find coordinator for {device}")
+        _LOGGER.error("Unable to find coordinator for %s", device)
         return
 
     channel_str = data[ARGS_CHANNEL]
@@ -195,7 +195,7 @@ async def _async_handle_set_scheduled_watering(hass: HomeAssistant, data: Mappin
         _LOGGER.error(
             "%s: %s - Invalid channel specified: %s",
             device,
-            SERVICE_SET_SMART_WATERING,
+            SERVICE_SET_SCHEDULED_WATERING,
             channel_str
         )
         raise HomeAssistantError(f"Invalid channel '{channel_str}' specified")
@@ -204,7 +204,7 @@ async def _async_handle_set_scheduled_watering(hass: HomeAssistant, data: Mappin
         _LOGGER.error(
             "%s: %s - Invalid duration specified: %s",
             device,
-            SERVICE_SET_SMART_WATERING,
+            SERVICE_SET_SCHEDULED_WATERING,
             duration
         )
         raise HomeAssistantError(f"Invalid duration '{duration}' specified")
@@ -213,7 +213,7 @@ async def _async_handle_set_scheduled_watering(hass: HomeAssistant, data: Mappin
         _LOGGER.error(
             "%s: %s - Invalid interval specified: %s",
             device,
-            SERVICE_SET_SMART_WATERING,
+            SERVICE_SET_SCHEDULED_WATERING,
             interval
         )
         raise HomeAssistantError(f"Invalid interval '{interval}' specified")
@@ -235,7 +235,7 @@ async def _async_handle_delete_watering(hass: HomeAssistant, data: Mapping[str, 
     if channel_str not in CHANNEL_NAME:
         _LOGGER.error(
             "%s: %s - Invalid channel specified: %s",
-            id,
+            device,
             SERVICE_DELETE_WATERING,
             channel_str
         )
@@ -245,7 +245,7 @@ async def _async_handle_delete_watering(hass: HomeAssistant, data: Mapping[str, 
     await coordinator.handle_delete_watering(channel)
 
 
-def _get_coordinator(hass: HomeAssistant, data: Mapping[str, Any]) -> { GrowcubeDataCoordinator, str }:
+def _get_coordinator(hass: HomeAssistant, data: Mapping[str, Any]) -> tuple[GrowcubeDataCoordinator | None, str]:
     device_registry = dr.async_get(hass)
     device_id = data[ATTR_DEVICE_ID]
     device_entry = device_registry.async_get(device_id)

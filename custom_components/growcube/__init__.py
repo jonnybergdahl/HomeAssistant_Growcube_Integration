@@ -4,19 +4,20 @@ import logging
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
 from homeassistant.const import CONF_HOST, Platform
+from homeassistant import config_entries
 from .coordinator import GrowcubeDataCoordinator
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import device_registry
 
 _LOGGER = logging.getLogger(__name__)
 
-from .const import *
+from .const import DOMAIN
 from .services import async_setup_services
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: dict):
+async def async_setup_entry(hass: HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
     """Set up the Growcube entry."""
     hass.data.setdefault(DOMAIN, {})
 
@@ -56,7 +57,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: dict):
     device_entry = registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, data_coordinator.data.device_id)},
-        name=f"GrowCube " + data_coordinator.device_id,
+        name=f"GrowCube {data_coordinator.device_id}",
         manufacturer="Elecrow",
         model="GrowCube",
         sw_version=data_coordinator.data.version
@@ -67,7 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: dict):
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: dict):
+async def async_unload_entry(hass: HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
     """Unload the Growcube entry."""
     client = hass.data[DOMAIN][entry.entry_id]
     client.disconnect()
@@ -75,7 +76,3 @@ async def async_unload_entry(hass: HomeAssistant, entry: dict):
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
     return unload_ok
-
-
-
-
