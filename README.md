@@ -1,7 +1,9 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
 # Elecrow GrowCube integration for Home Assistant
-Home Assistant integration for the [Elecrow GrowCube](https://www.elecrow.com/growcube-gardening-plants-smart-watering-kit-device.html), a smart plant watering device.
+This is an integration for using [Elecrow GrowCube](https://shrsl.com/4qit4) devices in Home Assistant.
+
+__Disclosure__: This is an affiliate link for [Hands on Katie](https://handsonkatie.com). If you make a purchase through this link, she may earn a small commission at no additional cost to you.
 
 > Please note that a Growcube device can only be connected to one client at a time. That means you 
 > will not be able to connect using the phone app while Home Assistant is running the integration, 
