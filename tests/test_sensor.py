@@ -17,9 +17,9 @@ async def test_sensor_creation(hass, mock_growcube_client):
     """Test creation of sensor entities."""
     # Create a mock coordinator
     mock_coordinator = MagicMock()
-    mock_coordinator.data.device_id = "test_device_id"
-    mock_coordinator.data.temperature = 25
-    mock_coordinator.data.humidity = 50
+    mock_coordinator.device.device_id = "test_device_id"
+    mock_coordinator.device.temperature = 25
+    mock_coordinator.device.humidity = 50
     mock_coordinator.device.device_info = {"identifiers": {("test", "test_id")}}
 
     # Create sensors

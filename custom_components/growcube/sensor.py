@@ -29,9 +29,9 @@ class TemperatureSensor(SensorEntity):
     def __init__(self, coordinator: GrowcubeDataCoordinator) -> None:
         self._coordinator = coordinator
         self._coordinator.register_temperature_state_callback(self.update)
-        self._attr_unique_id = f"{coordinator.data.device_id}_temperature"
+        self._attr_unique_id = f"{coordinator.device.device_id}_temperature"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
-        self._attr_native_value = coordinator.data.temperature
+        self._attr_native_value = coordinator.device.temperature
         self._attr_name = "Temperature"
         self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
         self._attr_device_class = SensorDeviceClass.TEMPERATURE
@@ -42,7 +42,7 @@ class TemperatureSensor(SensorEntity):
         return self._coordinator.device.device_info
 
     @callback
-    def update(self, new_value: int) -> None:
+    def update(self, new_value: int | None) -> None:
 
         _LOGGER.debug(
             "%s: Update temperature %s -> %s",
@@ -59,7 +59,7 @@ class HumiditySensor(SensorEntity):
     def __init__(self, coordinator: GrowcubeDataCoordinator) -> None:
         self._coordinator = coordinator
         self._coordinator.register_humidity_state_callback(self.update)
-        self._attr_unique_id = f"{coordinator.data.device_id}_humidity"
+        self._attr_unique_id = f"{coordinator.device.device_id}_humidity"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
         self._attr_name = "Humidity"
         self._attr_native_unit_of_measurement = PERCENTAGE
@@ -71,11 +71,12 @@ class HumiditySensor(SensorEntity):
         return self._coordinator.device.device_info
 
     @callback
-    def update(self, new_value: int) -> None:
+    def update(self, new_value: int | None) -> None:
         _LOGGER.debug(
-            "%s: Update humidity %s",
-            self._coordinator.data.device_id,
-            self._coordinator.data.humidity
+            "%s: Update humidity %s -> %s",
+            self._coordinator.device_id,
+            self._attr_native_value,
+            new_value
         )
         if new_value != self._attr_native_value:
             self._attr_native_value = new_value
@@ -88,7 +89,7 @@ class MoistureSensor(SensorEntity):
         self._coordinator = coordinator
         self._coordinator.register_moisture_state_callback(self.update)
         self._channel = channel
-        self._attr_unique_id = f"{coordinator.data.device_id}_moisture_{CHANNEL_ID[self._channel]}"
+        self._attr_unique_id = f"{coordinator.device.device_id}_moisture_{CHANNEL_ID[self._channel]}"
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
         self._attr_name = f"Moisture {CHANNEL_NAME[self._channel]}"
         self._attr_native_unit_of_measurement = PERCENTAGE
@@ -104,11 +105,12 @@ class MoistureSensor(SensorEntity):
         return "mdi:cup-water"
 
     @callback
-    def update(self, new_value: int) -> None:
+    def update(self, new_value: int | None) -> None:
         _LOGGER.debug(
-            "%s: Update moisture[%s] %s",
-            self._coordinator.data.device_id,
+            "%s: Update moisture[%s] %s -> %s",
+            self._coordinator.device_id,
             self._channel,
+            self._attr_native_value,
             new_value
         )
         if new_value != self._attr_native_value:

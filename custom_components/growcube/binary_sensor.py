@@ -2,7 +2,6 @@ from homeassistant.const import EntityCategory, Platform
 from homeassistant.core import callback, HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant import config_entries
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .coordinator import GrowcubeDataCoordinator
 from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
@@ -56,9 +55,10 @@ class DeviceLockedSensor(BinarySensorEntity):
         return self._coordinator.device.device_info
 
     @callback
-    def update(self, new_state: bool) -> None:
-        _LOGGER.debug("%s: Update device_locked %s",
+    def update(self, new_state: bool | None) -> None:
+        _LOGGER.debug("%s: Update device_locked %s -> %s",
                       self._coordinator.data.device_id,
+                      self._attr_is_on,
                       new_state
                       )
         if new_state != self._attr_is_on:
@@ -89,7 +89,7 @@ class WaterWarningSensor(BinarySensorEntity):
             return "mdi:water-check"
 
     @callback
-    def update(self, new_state: bool) -> None:
+    def update(self, new_state: bool | None) -> None:
         _LOGGER.debug("%s: Update water_state %s -> %s",
                       self._coordinator.data.device_id,
                       self._attr_is_on,
@@ -125,7 +125,7 @@ class PumpOpenStateSensor(BinarySensorEntity):
             return "mdi:water-off"
 
     @callback
-    def update(self, new_state: bool) -> None:
+    def update(self, new_state: bool | None) -> None:
         _LOGGER.debug("%s: Update pump_state[%s] %s -> %s",
                       self._coordinator.data.device_id,
                       self._channel,
@@ -161,7 +161,7 @@ class OutletLockedSensor(BinarySensorEntity):
             return "mdi:pump"
 
     @callback
-    def update(self, new_state: bool) -> None:
+    def update(self, new_state: bool | None) -> None:
         _LOGGER.debug("%s: Update pump_lock_state[%s] %s -> %s",
                       self._coordinator.data.device_id,
                       self._channel,
@@ -197,7 +197,7 @@ class OutletBlockedSensor(BinarySensorEntity):
             return "mdi:water-pump"
 
     @callback
-    def update(self, new_state: bool) -> None:
+    def update(self, new_state: bool | None) -> None:
         _LOGGER.debug("%s: Update pump_lock_state[%s] %s -> %s",
                       self._coordinator.data.device_id,
                       self._channel,
@@ -233,10 +233,11 @@ class SensorFaultSensor(BinarySensorEntity):
             return "mdi:thermometer-probe"
 
     @callback
-    def update(self, new_state: bool) -> None:
-        _LOGGER.debug("%s: Update sensor_state[%s] %s",
+    def update(self, new_state: bool | None) -> None:
+        _LOGGER.debug("%s: Update sensor_state[%s] %s -> %s",
                       self._coordinator.data.device_id,
                       self._channel,
+                      self._attr_is_on,
                       new_state
                       )
         if new_state != self._attr_is_on:
@@ -268,10 +269,11 @@ class SensorDisconnectedSensor(BinarySensorEntity):
             return "mdi:thermometer-probe"
 
     @callback
-    def update(self, new_state: bool) -> None:
-        _LOGGER.debug("%s: Update sensor_state[%s] %s",
+    def update(self, new_state: bool | None) -> None:
+        _LOGGER.debug("%s: Update sensor_state[%s] %s -> %s",
                       self._coordinator.data.device_id,
                       self._channel,
+                      self._attr_is_on,
                       new_state
                       )
         if new_state != self._attr_is_on:
