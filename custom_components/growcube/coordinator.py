@@ -16,22 +16,16 @@ from growcube_client import (
     CheckOutletLockedGrowcubeReport,
 )
 from growcube_client import WateringModeCommand, SyncTimeCommand, PlantEndCommand, ClosePumpCommand
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.core import HomeAssistant
 from homeassistant.const import (
     STATE_UNAVAILABLE,
-    STATE_OK,
-    STATE_PROBLEM,
-    STATE_LOCKED,
-    STATE_OPEN,
-    STATE_CLOSED,
 )
 import logging
 
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .const import DOMAIN, CHANNEL_NAME
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
