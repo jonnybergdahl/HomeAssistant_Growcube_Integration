@@ -79,7 +79,7 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
 
         self.shutting_down = False
         # Wait for the device to send back the DeviceVersionGrowcubeReport
-        while not self.device.device_id:
+        while not self.device_id:
             await asyncio.sleep(0.1)
         _LOGGER.debug(
             "Growcube device id: %s",
@@ -96,7 +96,7 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
 
     async def reconnect(self) -> None:
         if self.client.connected:
-            await self.client.disconnect()
+            self.client.disconnect()
 
         if not self.shutting_down:
             while True:
@@ -106,7 +106,7 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
                 if result:
                     _LOGGER.debug(
                         "Reconnect to %s succeeded",
-                        self.host
+                        self.client.host
                     )
                     self.shutting_down = False
                     await asyncio.sleep(10)
@@ -114,7 +114,7 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
 
                 _LOGGER.debug(
                     "Reconnect failed for %s with error '%s', retrying in 10 seconds",
-                    self.host,
+                    self.client.host,
                     error)
                 await asyncio.sleep(10)
 
