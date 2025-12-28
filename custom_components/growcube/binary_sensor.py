@@ -5,6 +5,7 @@ from homeassistant import config_entries
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .coordinator import GrowcubeDataCoordinator
 from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN, CHANNEL_NAME, CHANNEL_ID
 import logging
 
@@ -36,246 +37,145 @@ async def async_setup_entry(hass: HomeAssistant, entry: config_entries.ConfigEnt
                         SensorDisconnectedSensor(coordinator, 1),
                         SensorDisconnectedSensor(coordinator, 2),
                         SensorDisconnectedSensor(coordinator, 3),
-                        ], True)
+                        ])
 
 
-class DeviceLockedSensor(BinarySensorEntity):
+class DeviceLockedSensor(CoordinatorEntity[GrowcubeDataCoordinator], BinarySensorEntity):
+    _attr_has_entity_name = True
+    _attr_translation_key = "device_locked"
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
     def __init__(self, coordinator: GrowcubeDataCoordinator):
-        super().__init__()
-        self._coordinator = coordinator
-        self._coordinator.register_device_locked_state_callback(self.update)
+        super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.data.device_id}_device_locked"
-        self._attr_name = "Device locked"
-        self._attr_device_class = BinarySensorDeviceClass.PROBLEM
-        self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        self._attr_is_on = coordinator.data.device_locked
+        self._attr_device_info = coordinator.data.device_info
 
     @property
-    def device_info(self) -> DeviceInfo | None:
-        return self._coordinator.device.device_info
-
-    @callback
-    def update(self, new_state: bool | None) -> None:
-        _LOGGER.debug("%s: Update device_locked %s -> %s",
-                      self._coordinator.data.device_id,
-                      self._attr_is_on,
-                      new_state
-                      )
-        if new_state != self._attr_is_on:
-            self._attr_is_on = new_state
-            self.async_write_ha_state()
+    def is_on(self) -> bool:
+        return self.coordinator.data.device_locked
 
 
-class WaterWarningSensor(BinarySensorEntity):
+class WaterWarningSensor(CoordinatorEntity[GrowcubeDataCoordinator], BinarySensorEntity):
+    _attr_has_entity_name = True
+    _attr_translation_key = "water_warning"
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
     def __init__(self, coordinator: GrowcubeDataCoordinator):
-        super().__init__()
-        self._coordinator = coordinator
-        self._coordinator.register_water_warning_state_callback(self.update)
+        super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.data.device_id}_water_warning"
-        self._attr_name = "Water warning"
-        self._attr_device_class = BinarySensorDeviceClass.PROBLEM
-        self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        self._attr_is_on = coordinator.data.water_warning
+        self._attr_device_info = coordinator.data.device_info
 
     @property
-    def device_info(self) -> DeviceInfo | None:
-        return self._coordinator.device.device_info
+    def is_on(self) -> bool:
+        return self.coordinator.data.water_warning
 
     @property
     def icon(self) -> str:
-        if self._attr_is_on:
-            return "mdi:water-alert"
-        else:
-            return "mdi:water-check"
-
-    @callback
-    def update(self, new_state: bool | None) -> None:
-        _LOGGER.debug("%s: Update water_state %s -> %s",
-                      self._coordinator.data.device_id,
-                      self._attr_is_on,
-                      new_state
-                      )
-        if new_state != self._attr_is_on:
-            self._attr_is_on = new_state
-            self.async_write_ha_state()
+        return "mdi:water-alert" if self.is_on else "mdi:water-check"
 
 
-class PumpOpenStateSensor(BinarySensorEntity):
+class PumpOpenStateSensor(CoordinatorEntity[GrowcubeDataCoordinator], BinarySensorEntity):
+    _attr_has_entity_name = True
+    _attr_device_class = BinarySensorDeviceClass.OPENING
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator: GrowcubeDataCoordinator, channel: int) -> None:
-        super().__init__()
-        self._coordinator = coordinator
-        self._coordinator.register_pump_open_state_callback(self.update)
+        super().__init__(coordinator)
         self._channel = channel
-        self._attr_unique_id = f"{coordinator.data.device_id}_pump_{CHANNEL_ID[channel]}_open"
         self._attr_name = f"Pump {CHANNEL_NAME[channel]} open"
-        self._attr_device_class = BinarySensorDeviceClass.OPENING
-        self._attr_is_on = coordinator.data.pump_open[self._channel]
-        self._attr_entity_registry_enabled_default = False
+        self._attr_unique_id = f"{coordinator.data.device_id}_pump_{CHANNEL_ID[channel]}_open"
+        self._attr_device_info = coordinator.data.device_info
 
     @property
-    def device_info(self) -> DeviceInfo | None:
-        return self._coordinator.device.device_info
+    def is_on(self) -> bool:
+        return self.coordinator.data.pump_open[self._channel]
 
     @property
     def icon(self) -> str:
-        if self._attr_is_on:
-            return "mdi:water"
-        else:
-            return "mdi:water-off"
-
-    @callback
-    def update(self, new_state: bool | None) -> None:
-        _LOGGER.debug("%s: Update pump_state[%s] %s -> %s",
-                      self._coordinator.data.device_id,
-                      self._channel,
-                      self._attr_is_on,
-                      new_state
-                      )
-        if new_state != self._attr_is_on:
-            self._attr_is_on = new_state
-            self.async_write_ha_state()
+        return "mdi:water" if self.is_on else "mdi:water-off"
 
 
-class OutletLockedSensor(BinarySensorEntity):
+class OutletLockedSensor(CoordinatorEntity[GrowcubeDataCoordinator], BinarySensorEntity):
+    _attr_has_entity_name = True
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
     def __init__(self, coordinator: GrowcubeDataCoordinator, channel: int) -> None:
-        super().__init__()
-        self._coordinator = coordinator
-        self._coordinator.register_outlet_locked_state_callback(self.update)
+        super().__init__(coordinator)
         self._channel = channel
-        self._attr_unique_id = f"{coordinator.data.device_id}_outlet_{CHANNEL_ID[channel]}_locked"
         self._attr_name = f"Outlet {CHANNEL_NAME[channel]} locked"
-        self._attr_device_class = BinarySensorDeviceClass.PROBLEM
-        self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        self._attr_is_on = coordinator.data.outlet_locked_state[self._channel]
+        self._attr_unique_id = f"{coordinator.data.device_id}_outlet_{CHANNEL_ID[channel]}_locked"
+        self._attr_device_info = coordinator.data.device_info
 
     @property
-    def device_info(self) -> DeviceInfo | None:
-        return self._coordinator.device.device_info
+    def is_on(self) -> bool:
+        return self.coordinator.data.outlet_locked[self._channel]
 
     @property
     def icon(self) -> str:
-        if self._attr_is_on:
-            return "mdi:pump-off"
-        else:
-            return "mdi:pump"
-
-    @callback
-    def update(self, new_state: bool | None) -> None:
-        _LOGGER.debug("%s: Update pump_lock_state[%s] %s -> %s",
-                      self._coordinator.data.device_id,
-                      self._channel,
-                      self._attr_is_on,
-                      new_state
-                      )
-        if new_state != self._attr_is_on:
-            self._attr_is_on = new_state
-            self.async_write_ha_state()
+        return "mdi:pump-off" if self.is_on else "mdi:pump"
 
 
-class OutletBlockedSensor(BinarySensorEntity):
+class OutletBlockedSensor(CoordinatorEntity[GrowcubeDataCoordinator], BinarySensorEntity):
+    _attr_has_entity_name = True
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
     def __init__(self, coordinator: GrowcubeDataCoordinator, channel: int) -> None:
-        super().__init__()
-        self._coordinator = coordinator
-        self._coordinator.register_outlet_blocked_state_callback(self.update)
+        super().__init__(coordinator)
         self._channel = channel
-        self._attr_unique_id = f"{coordinator.data.device_id}_outlet_{CHANNEL_ID[channel]}_blocked"
         self._attr_name = f"Outlet {CHANNEL_NAME[channel]} blocked"
-        self._attr_device_class = BinarySensorDeviceClass.PROBLEM
-        self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        self._attr_is_on = coordinator.data.outlet_blocked_state[self._channel]
+        self._attr_unique_id = f"{coordinator.data.device_id}_outlet_{CHANNEL_ID[channel]}_blocked"
+        self._attr_device_info = coordinator.data.device_info
 
     @property
-    def device_info(self) -> DeviceInfo | None:
-        return self._coordinator.device.device_info
+    def is_on(self) -> bool:
+        return self.coordinator.data.outlet_blocked[self._channel]
 
     @property
     def icon(self) -> str:
-        if self._attr_is_on:
-            return "mdi:water-pump-off"
-        else:
-            return "mdi:water-pump"
-
-    @callback
-    def update(self, new_state: bool | None) -> None:
-        _LOGGER.debug("%s: Update pump_lock_state[%s] %s -> %s",
-                      self._coordinator.data.device_id,
-                      self._channel,
-                      self._attr_is_on,
-                      new_state
-                      )
-        if new_state != self._attr_is_on:
-            self._attr_is_on = new_state
-            self.async_write_ha_state()
+        return "mdi:water-pump-off" if self.is_on else "mdi:water-pump"
 
 
-class SensorFaultSensor(BinarySensorEntity):
+class SensorFaultSensor(CoordinatorEntity[GrowcubeDataCoordinator], BinarySensorEntity):
+    _attr_has_entity_name = True
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
     def __init__(self, coordinator: GrowcubeDataCoordinator, channel: int) -> None:
-        super().__init__()
-        self._coordinator = coordinator
-        self._coordinator.register_sensor_fault_state_callback(self.update)
+        super().__init__(coordinator)
         self._channel = channel
-        self._attr_unique_id = f"{coordinator.data.device_id}_sensor_{CHANNEL_ID[channel]}_fault"
         self._attr_name = f"Sensor {CHANNEL_NAME[channel]} fault"
-        self._attr_device_class = BinarySensorDeviceClass.PROBLEM
-        self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        self._attr_is_on = coordinator.data.sensor_abnormal[self._channel]
+        self._attr_unique_id = f"{coordinator.data.device_id}_sensor_{CHANNEL_ID[channel]}_fault"
+        self._attr_device_info = coordinator.data.device_info
 
     @property
-    def device_info(self) -> DeviceInfo | None:
-        return self._coordinator.device.device_info
+    def is_on(self) -> bool:
+        return self.coordinator.data.sensor_fault[self._channel]
 
     @property
     def icon(self) -> str:
-        if self._attr_is_on:
-            return "mdi:thermometer-probe-off"
-        else:
-            return "mdi:thermometer-probe"
-
-    @callback
-    def update(self, new_state: bool | None) -> None:
-        _LOGGER.debug("%s: Update sensor_state[%s] %s -> %s",
-                      self._coordinator.data.device_id,
-                      self._channel,
-                      self._attr_is_on,
-                      new_state
-                      )
-        if new_state != self._attr_is_on:
-            self._attr_is_on = new_state
-            self.async_write_ha_state()
+        return "mdi:thermometer-probe-off" if self.is_on else "mdi:thermometer-probe"
 
 
-class SensorDisconnectedSensor(BinarySensorEntity):
+class SensorDisconnectedSensor(CoordinatorEntity[GrowcubeDataCoordinator], BinarySensorEntity):
+    _attr_has_entity_name = True
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
     def __init__(self, coordinator: GrowcubeDataCoordinator, channel: int) -> None:
-        super().__init__()
-        self._coordinator = coordinator
-        self._coordinator.register_sensor_disconnected_state_callback(self.update)
+        super().__init__(coordinator)
         self._channel = channel
-        self._attr_unique_id = f"{coordinator.data.device_id}_sensor_{CHANNEL_ID[channel]}_disconnected"
         self._attr_name = f"Sensor {CHANNEL_NAME[channel]} disconnected"
-        self._attr_device_class = BinarySensorDeviceClass.PROBLEM
-        self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        self._attr_is_on = coordinator.data.sensor_disconnected[self._channel]
+        self._attr_unique_id = f"{coordinator.data.device_id}_sensor_{CHANNEL_ID[channel]}_disconnected"
+        self._attr_device_info = coordinator.data.device_info
 
     @property
-    def device_info(self) -> DeviceInfo | None:
-        return self._coordinator.device.device_info
+    def is_on(self) -> bool:
+        return self.coordinator.data.sensor_disconnected[self._channel]
 
     @property
     def icon(self) -> str:
-        if self._attr_is_on:
-            return "mdi:thermometer-probe-off"
-        else:
-            return "mdi:thermometer-probe"
-
-    @callback
-    def update(self, new_state: bool | None) -> None:
-        _LOGGER.debug("%s: Update sensor_state[%s] %s -> %s",
-                      self._coordinator.data.device_id,
-                      self._channel,
-                      self._attr_is_on,
-                      new_state
-                      )
-        if new_state != self._attr_is_on:
-            self._attr_is_on = new_state
-            self.async_write_ha_state()
+        return "mdi:thermometer-probe-off" if self.is_on else "mdi:thermometer-probe"

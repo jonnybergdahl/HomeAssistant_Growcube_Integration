@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime
 from typing import Optional, List, Tuple, Callable
+from dataclasses import replace
 
 from growcube_client import GrowcubeClient, GrowcubeReport, Channel, WateringMode
 from growcube_client import (
@@ -30,47 +31,50 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-class GrowcubeDeviceModel:
-    def __init__(self, host: str):
-        # Device
-        self.host: str = host
-        self.version: str = ""
-        self.device_id: Optional[str] = None
-        self.device_info: Optional[DeviceInfo] = None
+from dataclasses import dataclass, field
+
+@dataclass
+class GrowcubeData:
+    """Class to hold Growcube data."""
+    temperature: Optional[int] = None
+    humidity: Optional[int] = None
+    moisture: List[Optional[int]] = field(default_factory=lambda: [None] * 4)
+    pump_open: List[bool] = field(default_factory=lambda: [False] * 4)
+    sensor_fault: List[bool] = field(default_factory=lambda: [False] * 4)
+    sensor_disconnected: List[bool] = field(default_factory=lambda: [False] * 4)
+    outlet_blocked: List[bool] = field(default_factory=lambda: [False] * 4)
+    outlet_locked: List[bool] = field(default_factory=lambda: [False] * 4)
+    water_warning: bool = False
+    device_locked: bool = False
+    device_id: Optional[str] = None
+    version: Optional[str] = None
+    device_info: Optional[DeviceInfo] = None
 
 
-
-class GrowcubeDataCoordinator(DataUpdateCoordinator):
+class GrowcubeDataCoordinator(DataUpdateCoordinator[GrowcubeData]):
     def __init__(self, host: str, hass: HomeAssistant):
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=None)
         self.client = GrowcubeClient(
-            host, self.handle_report, self.on_connected, self.on_disconnected
+            host=host,
+            on_message_callback=self.handle_report,
+            on_connected_callback=self.on_connected,
+            on_disconnected_callback=self.on_disconnected,
         )
-        self.device_id = None
-        self.device: GrowcubeDeviceModel = GrowcubeDeviceModel(host)
+        self.host = host
+        self.data = GrowcubeData()
         self.shutting_down = False
-        self._device_locked = False
-        self._device_locked_callback: Callable[[bool], None] | None = None
-        self._water_warning_callback: Callable[[bool], None] | None = None
-        self._pump_open_callbacks: dict[int, Callable[[bool], None]] = {}
-        self._outlet_locked_callbacks: dict[int, Callable[[bool], None]] = {}
-        self._outlet_blocked_callbacks: dict[int, Callable[[bool], None]] = {}
-        self._sensor_fault_callbacks: dict[int, Callable[[bool], None]] = {}
-        self._sensor_disconnected_callbacks: dict[int, Callable[[bool], None]] = {}
-        self._temperature_value_callback: Callable[[int | None], None] | None = None
-        self._humidity_value_callback: Callable[[int | None], None] | None = None
-        self._moisture_value_callbacks: dict[int, Callable[[bool | None], None]] = {}
 
     def set_device_id(self, device_id: str) -> None:
-        self.device_id = hex(int(device_id))[2:]
-        self.device.device_id = "growcube_{}".format(self.device_id)
-        self.device.device_info = {
-            "name": "GrowCube " + self.device_id,
-            "identifiers": {(DOMAIN, self.device.device_id)},
-            "manufacturer": "Elecrow",
-            "model": "Growcube",
-            "sw_version": self.device.version,
-        }
+        id_str = hex(int(device_id))[2:]
+        self.data.device_id = "growcube_{}".format(id_str)
+        self.data.device_info = DeviceInfo(
+            name="GrowCube " + id_str,
+            identifiers={(DOMAIN, self.data.device_id)},
+            manufacturer="Elecrow",
+            model="Growcube",
+            sw_version=self.data.version,
+        )
+        self.async_set_updated_data(self.data)
 
     async def connect(self) -> Tuple[bool, str]:
         result, error = await self.client.connect()
@@ -79,17 +83,23 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
 
         self.shutting_down = False
         # Wait for the device to send back the DeviceVersionGrowcubeReport
-        while not self.device_id:
+        retries = 50
+        while not self.data.device_id and retries > 0:
+            retries -= 1
             await asyncio.sleep(0.1)
+
+        if not self.data.device_id:
+            return False, "Timed out waiting for device ID"
+
         _LOGGER.debug(
             "Growcube device id: %s",
-            self.device_id
+            self.data.device_id
         )
 
         time_command = SyncTimeCommand(datetime.now())
         _LOGGER.debug(
             "%s: Sending SyncTimeCommand",
-            self.device_id
+            self.data.device_id
         )
         self.client.send_command(time_command)
         return True, ""
@@ -123,7 +133,7 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
         """This is used in the config flow to check for a valid device"""
         device_id = ""
 
-        def _handle_device_id_report(report: GrowcubeReport) -> None:
+        async def _handle_device_id_report(report: GrowcubeReport) -> None:
             if isinstance(report, DeviceVersionGrowcubeReport):
                 nonlocal device_id
                 device_id = report.device_id
@@ -133,8 +143,14 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
             while not device_id:
                 await asyncio.sleep(0.1)
 
-        client = GrowcubeClient(host, _handle_device_id_report)
-        result, error = await client.connect()
+        client = GrowcubeClient(
+            host=host,
+            on_message_callback=_handle_device_id_report,
+        )
+        try:
+            result, error = await asyncio.wait_for(client.connect(), timeout=5)
+        except asyncio.TimeoutError:
+            return False, "Timed out connecting to device"
         if not result:
             return False, error
 
@@ -147,7 +163,7 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
 
         return True, device_id
 
-    def on_connected(self, host: str) -> None:
+    async def on_connected(self, host: str) -> None:
         _LOGGER.debug(
             "Connection to %s established",
             host
@@ -155,11 +171,18 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
 
     async def on_disconnected(self, host: str) -> None:
         _LOGGER.debug("Connection to %s lost", host)
-        if self.device.device_id is not None:
-            self.hass.states.async_set(
-                DOMAIN + "." + self.device.device_id, STATE_UNAVAILABLE
-            )
-            self.reset_sensor_data()
+        self.data.temperature = None
+        self.data.humidity = None
+        self.data.moisture = [None] * 4
+        self.data.pump_open = [False] * 4
+        self.data.sensor_fault = [False] * 4
+        self.data.sensor_disconnected = [False] * 4
+        self.data.outlet_blocked = [False] * 4
+        self.data.outlet_locked = [False] * 4
+        self.data.water_warning = False
+        self.data.device_locked = False
+        self.async_set_updated_data(self.data)
+
         if not self.shutting_down:
             _LOGGER.debug(
                 "Device host %s went offline, will try to reconnect",
@@ -172,125 +195,9 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
         self.shutting_down = True
         self.client.disconnect()
 
-    def reset_sensor_data(self) -> None:
-        if self._device_locked_callback is not None:
-            self._device_locked_callback(False)
-        if self._water_warning_callback is not None:
-            self._water_warning_callback(False)
-        if self._pump_open_callbacks[0] is not None:
-            self._pump_open_callbacks[0](False)
-        if self._pump_open_callbacks[1] is not None:
-            self._pump_open_callbacks[1](False)
-        if self._pump_open_callbacks[2] is not None:
-            self._pump_open_callbacks[2](False)
-        if self._pump_open_callbacks[3] is not None:
-            self._pump_open_callbacks[3](False)
-        if self._outlet_locked_callbacks[0] is not None:
-            self._outlet_locked_callbacks[0](False)
-        if self._outlet_locked_callbacks[1] is not None:
-            self._outlet_locked_callbacks[1](False)
-        if self._outlet_locked_callbacks[2] is not None:
-            self._outlet_locked_callbacks[2](False)
-        if self._outlet_locked_callbacks[3] is not None:
-            self._outlet_locked_callbacks[3](False)
-        if self._outlet_blocked_callbacks[0] is not None:
-            self._outlet_blocked_callbacks[0](False)
-        if self._outlet_blocked_callbacks[1] is not None:
-            self._outlet_blocked_callbacks[1](False)
-        if self._outlet_blocked_callbacks[2] is not None:
-            self._outlet_blocked_callbacks[2](False)
-        if self._outlet_blocked_callbacks[3] is not None:
-            self._outlet_blocked_callbacks[3](False)
-        if self._sensor_fault_callbacks[0] is not None:
-            self._sensor_fault_callbacks[0](False)
-        if self._sensor_fault_callbacks[1] is not None:
-            self._sensor_fault_callbacks[1](False)
-        if self._sensor_fault_callbacks[2] is not None:
-            self._sensor_fault_callbacks[2](False)
-        if self._sensor_fault_callbacks[3] is not None:
-            self._sensor_fault_callbacks[3](False)
-        if self._sensor_disconnected_callbacks[0] is not None:
-            self._sensor_disconnected_callbacks[0](False)
-        if self._sensor_disconnected_callbacks[1] is not None:
-            self._sensor_disconnected_callbacks[1](False)
-        if self._sensor_disconnected_callbacks[2] is not None:
-            self._sensor_disconnected_callbacks[2](False)
-        if self._sensor_disconnected_callbacks[3] is not None:
-            self._sensor_disconnected_callbacks[3](False)
-        if self._temperature_value_callback is not None:
-            self._temperature_value_callback(None)
-        if self._humidity_value_callback is not None:
-            self._humidity_value_callback(None)
-        if self._moisture_value_callbacks[0] is not None:
-            self._moisture_value_callbacks[0](None)
-        if self._moisture_value_callbacks[1] is not None:
-            self._moisture_value_callbacks[1](None)
-        if self._moisture_value_callbacks[2] is not None:
-            self._moisture_value_callbacks[2](None)
-        if self._moisture_value_callbacks[3] is not None:
-            self._moisture_value_callbacks[3](None)
+    async def handle_report(self, report: GrowcubeReport) -> None:
+        new: GrowcubeData = self.data
 
-    def register_device_locked_state_callback(self, callback: Callable[[bool], None]) -> None:
-        self._device_locked_callback = callback
-
-    def register_water_warning_state_callback(self, callback: Callable[[bool], None]) -> None:
-        self._water_warning_callback = callback
-
-    def register_pump_open_state_callback(self, channel: int, callback: Callable[[bool], None]) -> None:
-        self._pump_open_callbacks[channel] = callback
-
-    def register_outlet_locked_state_callback(self, channel: int, callback: Callable[[bool], None]) -> None:
-        self._outlet_locked_callbacks[channel] = callback
-
-    def register_outlet_blocked_state_callback(self, channel: int, callback: Callable[[bool], None]) -> None:
-        self._outlet_blocked_callbacks[channel] = callback
-
-    def register_sensor_fault_state_callback(self, channel: int, callback: Callable[[bool], None]) -> None:
-        self._sensor_fault_callbacks[channel] = callback
-
-    def register_sensor_disconnected_state_callback(self, channel: int, callback: Callable[[bool], None]) -> None:
-        self._sensor_disconnected_callbacks[channel] = callback
-
-    def register_temperature_state_callback(self, callback: Callable[[int], None]) -> None:
-        self._temperature_value_callback = callback
-
-    def register_humidity_state_callback(self, callback: Callable[[int], None]) -> None:
-        self._humidity_value_callback = callback
-
-    def register_moisture_state_callback(self, channel: int, callback: Callable[[int], None]) -> None:
-        self._moisture_value_callbacks[channel] = callback
-
-    def unregister_device_locked_state_callback(self) -> None:
-        self._device_locked_callback = None
-
-    def unregister_water_warning_state_callback(self) -> None:
-        self._water_warning_callback = None
-
-    def unregister_pump_open_state_callback(self, channel: int) -> None:
-       self._pump_open_callbacks.pop(channel)
-
-    def unregister_outlet_locked_state_callback(self, channel: int, callback: Callable[[bool], None]) -> None:
-        self._outlet_locked_callbacks.pop(channel)
-
-    def unregister_outlet_blocked_state_callback(self, channel: int, callback: Callable[[bool], None]) -> None:
-        self._outlet_blocked_callbacks.pop(channel)
-
-    def unregister_sensor_fault_state_callback(self, channel: int, callback: Callable[[bool], None]) -> None:
-        self._sensor_fault_callbacks.pop(channel)
-
-    def unregister_sensor_disconnected_state_callback(self, channel: int, callback: Callable[[bool], None]) -> None:
-        self._sensor_disconnected_callbacks.pop(channel)
-
-    def unregister_temperature_state_callback(self, callback: Callable[[int], None]) -> None:
-        self._temperature_value_callback = None
-
-    def unregister_humidity_state_callback(self, callback: Callable[[int], None]) -> None:
-        self._humidity_value_callback = None
-
-    def unregister_moisture_state_callback(self, channel: int, callback: Callable[[int], None]) -> None:
-        self._moisture_value_callbacks.pop(channel)
-
-    def handle_report(self, report: GrowcubeReport) -> None:
         """Handle a report from the Growcube."""
         # 24 - RepDeviceVersion
         if isinstance(report, DeviceVersionGrowcubeReport):
@@ -299,110 +206,104 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
                 report.device_id,
                 report.version
             )
-            self.reset_sensor_data()
-            self.device.version = report.version
+            self.data.version = report.version
             self.set_device_id(report.device_id)
+            return
         # 20 - RepWaterState
         elif isinstance(report, WaterStateGrowcubeReport):
             _LOGGER.debug(
                 "%s: Water state %s",
-                self.device_id,
+                self.data.device_id,
                 report.water_warning
             )
-            if self._water_warning_callback is not None:
-                self._water_warning_callback(report.water_warning)
+            new = self._set_scalar(new, "water_warning", report.water_warning)
         # 21 - RepSTHSate
         elif isinstance(report, MoistureHumidityStateGrowcubeReport):
             _LOGGER.debug(
                 "%s: Sensor reading, channel %s, humidity %s, temperature %s, moisture %s",
-                self.device_id,
+                self.data.device_id,
                 report.channel,
                 report.humidity,
                 report.temperature,
                 report.moisture,
             )
-            if self._temperature_value_callback is not None:
-                self._temperature_value_callback(report.temperature)
-            if self._humidity_value_callback is not None:
-                self._humidity_value_callback(report.humidity)
-            if report.channel.value in self._moisture_value_callbacks:
-                self._moisture_value_callbacks[report.channel.value](report.moisture)
+            new = self._set_scalar(new, "temperature", report.temperature)
+            new = self._set_scalar(new, "humidity", report.humidity)
+            new = self._set_list_index(new, "moisture", report.channel.value, report.moisture)
         # 26 - RepPumpOpen
         elif isinstance(report, PumpOpenGrowcubeReport):
             _LOGGER.debug(
                 "%s: Pump open, channel %s",
-                self.device_id,
+                self.data.device_id,
                 report.channel
             )
-            if report.channel.value in self._pump_open_callbacks:
-                self._pump_open_callbacks[report.channel.value](True)
+            new = self._set_list_index(new, "pump_open", report.channel.value, True)
         # 27 - RepPumpClose
         elif isinstance(report, PumpCloseGrowcubeReport):
             _LOGGER.debug(
                 "%s: Pump closed, channel %s",
-                self.device_id,
+                self.data.device_id,
                 report.channel
             )
-            if report.channel.value in self._pump_open_callbacks:
-                self._pump_open_callbacks[report.channel.value](False)
+            new = self._set_list_index(new, "pump_open", report.channel, False)
         # 28 - RepCheckSenSorNotConnected
         elif isinstance(report, CheckSensorGrowcubeReport):
             _LOGGER.debug(
                 "%s: Sensor abnormal, channel %s",
-                self.device_id,
+                self.data.device_id,
                 report.channel
             )
-            if report.channel.value in self._sensor_fault_callbacks:
-                self._sensor_fault_callbacks[report.channel.value](True)
+            new = self._set_list_index(new, "sensor_fault", report.channel, True)
         # 29 - Pump channel blocked
         elif isinstance(report, CheckOutletBlockedGrowcubeReport):
             _LOGGER.debug(
                 "%s: Outlet blocked, channel %s",
-                self.device_id,
+                self.data.device_id,
                 report.channel
             )
-            if report.channel.value in self._outlet_blocked_callbacks:
-                self._outlet_blocked_callbacks[report.channel.value](True)
+            new = self._set_list_index(new, "outlet_blocked", report.channel, True)
         # 30 - RepCheckSenSorNotConnect
         elif isinstance(report, CheckSensorNotConnectedGrowcubeReport):
             _LOGGER.debug(
                 "%s: Check sensor, channel %s",
-                self.device_id,
+                self.data.device_id,
                 report.channel
             )
-            if report.channel.value in self._sensor_disconnected_callbacks:
-                self._sensor_disconnected_callbacks[report.channel.value](True)
+            new = self._set_list_index(new, "sensor_disconnected", report.channel, True)
         # 33 - RepLockstate
         elif isinstance(report, LockStateGrowcubeReport):
             _LOGGER.debug(
                 "%s: Lock state, %s",
-                self.device_id,
+                self.data.device_id,
                 report.lock_state
             )
             # Handle case where the button on the device was pressed, this should do a reconnect
             # to read any problems still present
-            if not report.lock_state:
-                self.reset_sensor_data()
-                self.reconnect()
-            if self._device_locked_callback is not None:
-                self._device_locked_callback(report.lock_state)
+            if self.data.device_locked and not report.lock_state:
+                self.hass.async_create_task(self.reconnect())
+            new = self._set_scalar(new, "device_locked", report.lock_state)
         # 34 - ReqCheckSenSorLock
         elif isinstance(report, CheckOutletLockedGrowcubeReport):
             _LOGGER.debug(
                 "%s Check outlet, channel %s",
-                self.device_id,
+                self.data.device_id,
                 report.channel
             )
-            if report.channel.value in self._outlet_locked_callbacks:
-                self._outlet_locked_callbacks[report.channel.value](True)
+            new = self._set_list_index(new, "outlet_locked", report.channel, True)
+
+        if new is not self.data:
+            self.data = new
+            self.async_set_updated_data(new)
+
 
     async def water_plant(self, channel: int) -> None:
         await self.client.water_plant(Channel(channel), 5)
 
+
     async def handle_water_plant(self, channel: Channel, duration: int) -> None:
         _LOGGER.debug(
             "%s: Service water_plant called, %s, %s",
-            self.device_id,
+            self.data.device_id,
             channel,
             duration
         )
@@ -415,7 +316,7 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
 
         _LOGGER.debug(
             "%s: Service set_smart_watering called, %s, %s, %s, %s",
-            self.device_id,
+            self.data.device_id,
             channel,
             all_day,
             min_moisture,
@@ -430,7 +331,7 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
 
         _LOGGER.debug(
             "%s: Service set_manual_watering called, %s, %s, %s",
-            self.device_id,
+            self.data.device_id,
             channel,
             duration,
             interval,
@@ -443,10 +344,28 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator):
 
         _LOGGER.debug(
             "%s: Service delete_watering called, %s,",
-            self.device_id,
+            self.data.device_id,
             channel
         )
         command = PlantEndCommand(channel)
         self.client.send_command(command)
         command = ClosePumpCommand(channel)
         self.client.send_command(command)
+
+    def _set_scalar(self, new: GrowcubeData, attr: str, value) -> GrowcubeData:
+        if getattr(self.data, attr) == value:
+            return new
+        return replace(new, **{attr: value})
+
+    def _set_list_index(self,
+        new: GrowcubeData,
+        attr: str,
+        idx: int,
+        value,
+    ) -> GrowcubeData:
+        current_list = getattr(self.data, attr)
+        if current_list[idx] == value:
+            return new
+        copied = list(getattr(new, attr))  # copy from `new` (which may already be replaced)
+        copied[idx] = value
+        return replace(new, **{attr: copied})

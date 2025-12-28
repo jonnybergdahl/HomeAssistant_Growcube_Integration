@@ -24,21 +24,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: config_entries.ConfigEnt
     host_name = entry.data[CONF_HOST]
     data_coordinator = GrowcubeDataCoordinator(host_name, hass)
     try:
-        await data_coordinator.connect()
-        hass.data[DOMAIN][entry.entry_id] = data_coordinator
-
-        # Wait for device to report id
-        retries = 3
-        while not data_coordinator.device_id and retries > 0:
-            retries -= 1
-            await asyncio.sleep(0.5)
-
-        if retries == 0:
+        connected, error = await data_coordinator.connect()
+        if not connected:
             _LOGGER.error(
-                "Unable to read device id of %s, device is probably connected to another app",
-                host_name
+                "Unable to connect to %s: %s",
+                host_name,
+                error
             )
             return False
+
+        hass.data[DOMAIN][entry.entry_id] = data_coordinator
 
     except asyncio.TimeoutError:
         _LOGGER.error(
@@ -52,16 +47,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: config_entries.ConfigEnt
             host_name
         )
         return False
-
-    registry = device_registry.async_get(hass)
-    device_entry = registry.async_get_or_create(
-        config_entry_id=entry.entry_id,
-        identifiers={(DOMAIN, data_coordinator.data.device_id)},
-        name=f"GrowCube {data_coordinator.device_id}",
-        manufacturer="Elecrow",
-        model="GrowCube",
-        sw_version=data_coordinator.data.version
-    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_setup_services(hass)
