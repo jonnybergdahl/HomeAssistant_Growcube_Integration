@@ -4,7 +4,8 @@ from typing import Optional, Dict, Any
 import voluptuous as vol
 import asyncio
 from homeassistant import config_entries
-from homeassistant.components import dhcp
+from homeassistant.config_entries import ConfigFlowResult
+from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
 from homeassistant.core import callback
 from homeassistant.const import CONF_HOST
 from homeassistant.data_entry_flow import FlowResult
@@ -21,7 +22,7 @@ class GrowcubeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Growcube config flow."""
     VERSION = 1
 
-    async def async_step_dhcp(self, discovery_info: dhcp.DhcpServiceInfo) -> FlowResult:
+    async def async_step_dhcp(self, discovery_info: DhcpServiceInfo) -> ConfigFlowResult:
         """Handle DHCP discovery flow."""
         host = discovery_info.ip
         # Validate device by connecting and getting device_id
@@ -33,7 +34,7 @@ class GrowcubeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured(updates={CONF_HOST: host})
         return self.async_create_entry(title=host, data={CONF_HOST: host})
 
-    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle a flow initialized by the user."""
 
         if not user_input:
@@ -63,7 +64,7 @@ class GrowcubeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return errors, device_id
 
-    async def _show_form(self, errors: dict[str, str] | None = None) -> FlowResult:
+    async def _show_form(self, errors: dict[str, str] | None = None) -> ConfigFlowResult:
         """Show the form to the user."""
         return self.async_show_form(
             step_id="user",
