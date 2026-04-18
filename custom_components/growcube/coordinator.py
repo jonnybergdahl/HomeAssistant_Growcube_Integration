@@ -337,7 +337,7 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator[GrowcubeData]):
             interval,
         )
 
-        command = WateringModeCommand(channel, WateringMode.Manual, interval, duration)
+        command = WateringModeCommand(channel, WateringMode.Scheduled, interval, duration)
         self.client.send_command(command)
 
     async def handle_delete_watering(self, channel: Channel) -> None:
