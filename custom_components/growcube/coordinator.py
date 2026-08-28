@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime
-from typing import Optional, List, Tuple, Callable
+from typing import Optional, List, Tuple
 from dataclasses import replace
 
 from growcube_client import GrowcubeClient, GrowcubeReport, Channel, WateringMode
@@ -18,9 +18,6 @@ from growcube_client import (
 )
 from growcube_client import WateringModeCommand, SyncTimeCommand, PlantEndCommand, ClosePumpCommand
 from homeassistant.core import HomeAssistant
-from homeassistant.const import (
-    STATE_UNAVAILABLE
-)
 import logging
 
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -29,6 +26,10 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+# Seconds to wait after connecting for the device to send its
+# DeviceVersionGrowcubeReport before the connection counts as failed.
+DEVICE_ID_TIMEOUT = 5
 
 
 from dataclasses import dataclass, field
@@ -63,6 +64,8 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator[GrowcubeData]):
         self.host = host
         self.data = GrowcubeData()
         self.shutting_down = False
+        self._reconnect_task: Optional[asyncio.Task] = None
+        self._device_id_received = asyncio.Event()
 
     def set_device_id(self, device_id: str) -> None:
         id_str = hex(int(device_id))[2:]
@@ -81,14 +84,18 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator[GrowcubeData]):
         if not result:
             return False, error
 
-        self.shutting_down = False
-        # Wait for the device to send back the DeviceVersionGrowcubeReport
-        retries = 50
-        while not self.data.device_id and retries > 0:
-            retries -= 1
-            await asyncio.sleep(0.1)
-
-        if not self.data.device_id:
+        # Wait for the device to send back the DeviceVersionGrowcubeReport.
+        # The event is cleared first so a reconnect waits for a report from
+        # this connection instead of passing on one from a previous session.
+        self._device_id_received.clear()
+        try:
+            await asyncio.wait_for(
+                self._device_id_received.wait(), timeout=DEVICE_ID_TIMEOUT
+            )
+        except asyncio.TimeoutError:
+            # The Growcube serves a single TCP client; a connection left open
+            # here would block every future attempt until HA restarts.
+            self.client.disconnect()
             return False, "Timed out waiting for device ID"
 
         _LOGGER.debug(
@@ -104,29 +111,40 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator[GrowcubeData]):
         self.client.send_command(time_command)
         return True, ""
 
-    async def reconnect(self) -> None:
-        if self.client.connected:
-            self.client.disconnect()
+    def _start_reconnect(self, delay: float = 0) -> None:
+        # A single reconnect task at a time; on_disconnected fires for every
+        # lost connection, including ones closed by the reconnect loop itself.
+        if self._reconnect_task and not self._reconnect_task.done():
+            return
+        self._reconnect_task = self.hass.async_create_task(
+            self.reconnect(delay), name=f"growcube reconnect {self.host}"
+        )
 
-        if not self.shutting_down:
-            while True:
-                # Set flag to avoid handling in on_disconnected
-                self.shutting_down = True
-                result, error = await self.client.connect()
-                if result:
-                    _LOGGER.debug(
-                        "Reconnect to %s succeeded",
-                        self.client.host
-                    )
-                    self.shutting_down = False
-                    await asyncio.sleep(10)
-                    return
+    async def reconnect(self, delay: float = 0) -> None:
+        if delay:
+            await asyncio.sleep(delay)
 
+        while not self.shutting_down:
+            if self.client.connected:
+                self.client.disconnect()
+
+            result, error = await self.connect()
+            # The client absorbs task cancellation inside connect(), so a
+            # shutdown during the attempt surfaces here instead of raising.
+            if self.shutting_down:
+                return
+            if result:
                 _LOGGER.debug(
-                    "Reconnect failed for %s with error '%s', retrying in 10 seconds",
-                    self.client.host,
-                    error)
-                await asyncio.sleep(10)
+                    "Reconnect to %s succeeded",
+                    self.client.host
+                )
+                return
+
+            _LOGGER.debug(
+                "Reconnect failed for %s with error '%s', retrying in 10 seconds",
+                self.client.host,
+                error)
+            await asyncio.sleep(10)
 
     @staticmethod
     async def get_device_id(host: str) -> tuple[bool, str]:
@@ -188,11 +206,12 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator[GrowcubeData]):
                 "Device host %s went offline, will try to reconnect",
                 host
             )
-            loop = asyncio.get_event_loop()
-            loop.call_later(10, lambda: loop.create_task(self.reconnect()))
+            self._start_reconnect(delay=10)
 
     def disconnect(self) -> None:
         self.shutting_down = True
+        if self._reconnect_task and not self._reconnect_task.done():
+            self._reconnect_task.cancel()
         self.client.disconnect()
 
     async def handle_report(self, report: GrowcubeReport) -> None:
@@ -208,6 +227,7 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator[GrowcubeData]):
             )
             self.data.version = report.version
             self.set_device_id(report.device_id)
+            self._device_id_received.set()
             return
         # 20 - RepWaterState
         elif isinstance(report, WaterStateGrowcubeReport):
@@ -280,7 +300,7 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator[GrowcubeData]):
             # Handle case where the button on the device was pressed, this should do a reconnect
             # to read any problems still present
             if self.data.device_locked and not report.lock_state:
-                self.hass.async_create_task(self.reconnect())
+                self._start_reconnect()
             new = self._set_scalar(new, "device_locked", report.lock_state)
         # 34 - ReqCheckSenSorLock
         elif isinstance(report, CheckOutletLockedGrowcubeReport):

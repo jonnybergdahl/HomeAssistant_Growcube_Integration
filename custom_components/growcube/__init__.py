@@ -1,15 +1,10 @@
 """The Growcube integration."""
 import asyncio
-import logging
-import voluptuous as vol
-import homeassistant.helpers.config_validation as cv
 from homeassistant.const import CONF_HOST, Platform
 from homeassistant import config_entries
+from homeassistant.exceptions import ConfigEntryNotReady
 from .coordinator import GrowcubeDataCoordinator
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry
-
-_LOGGER = logging.getLogger(__name__)
+from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
 from .services import async_setup_services
@@ -25,28 +20,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: config_entries.ConfigEnt
     data_coordinator = GrowcubeDataCoordinator(host_name, hass)
     try:
         connected, error = await data_coordinator.connect()
-        if not connected:
-            _LOGGER.error(
-                "Unable to connect to %s: %s",
-                host_name,
-                error
-            )
-            return False
+    except asyncio.TimeoutError as exception:
+        raise ConfigEntryNotReady(
+            f"Connection to {host_name} timed out"
+        ) from exception
+    except OSError as exception:
+        raise ConfigEntryNotReady(
+            f"Unable to connect to host {host_name}: {exception}"
+        ) from exception
 
-        hass.data[DOMAIN][entry.entry_id] = data_coordinator
+    if not connected:
+        # connect() already closed the client on a handshake timeout; this
+        # call additionally sets shutting_down and cancels a reconnect task
+        # that a racing on_disconnected may have spawned, so no orphan
+        # reconnect loop survives the failed setup.
+        data_coordinator.disconnect()
+        raise ConfigEntryNotReady(f"Unable to connect to {host_name}: {error}")
 
-    except asyncio.TimeoutError:
-        _LOGGER.error(
-            "Connection to %s timed out",
-            host_name
-        )
-        return False
-    except OSError:
-        _LOGGER.error(
-            "Unable to connect to host %s",
-            host_name
-        )
-        return False
+    hass.data[DOMAIN][entry.entry_id] = data_coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_setup_services(hass)
@@ -55,8 +46,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: config_entries.ConfigEnt
 
 async def async_unload_entry(hass: HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
     """Unload the Growcube entry."""
-    client = hass.data[DOMAIN][entry.entry_id]
-    client.disconnect()
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator.disconnect()
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
