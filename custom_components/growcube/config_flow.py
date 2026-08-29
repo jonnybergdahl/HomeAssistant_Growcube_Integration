@@ -2,7 +2,6 @@
 from typing import Optional, Dict, Any
 
 import voluptuous as vol
-import asyncio
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
@@ -56,7 +55,11 @@ class GrowcubeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Validate the user input."""
         errors = {}
         device_id = ""
-        result, value = await asyncio.wait_for(GrowcubeDataCoordinator.get_device_id(user_input[CONF_HOST]), timeout=4)
+        # No outer timeout: get_device_id bounds both the connect and the
+        # handshake itself and reports failure as a value. The wait_for that
+        # used to be here could fire first and raise TimeoutError out of the
+        # flow, which HA surfaces as "unknown error" instead of a form error.
+        result, value = await GrowcubeDataCoordinator.get_device_id(user_input[CONF_HOST])
         if not result:
             errors[CONF_HOST] = value
         else:

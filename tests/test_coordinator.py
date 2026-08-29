@@ -1,4 +1,5 @@
 """Tests for the Growcube coordinator."""
+import asyncio
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock, call
 
@@ -19,6 +20,7 @@ from growcube_client import (
     CheckOutletLockedGrowcubeReport,
     Channel,
     WateringMode,
+    GrowcubeMessage,
 )
 
 from custom_components.growcube.coordinator import GrowcubeDataCoordinator
@@ -69,48 +71,56 @@ async def test_lock_state_change_triggers_reconnect(hass):
         coordinator.reconnect.assert_called_once()
 
 
-async def test_connect_disconnects_client_on_device_id_timeout(hass):
-    """A device ID timeout must close the connection.
+async def test_connect_reports_a_failed_handshake(hass):
+    """The client owns the handshake and its cleanup as of growcube-client 1.3.0.
 
-    The Growcube serves a single TCP client, so a connection left open after
-    a failed handshake blocks every later connection attempt.
+    connect() only has to pass the failure on, without recording anything from
+    an attempt that never identified a device.
     """
     host = "192.168.1.100"
-    with patch("custom_components.growcube.coordinator.GrowcubeClient"), \
-            patch("custom_components.growcube.coordinator.DEVICE_ID_TIMEOUT",
-                  0.01):
+    with patch("custom_components.growcube.coordinator.GrowcubeClient"):
         coordinator = GrowcubeDataCoordinator(host, hass)
-        coordinator.client.connect = AsyncMock(return_value=(True, ""))
-        coordinator.client.disconnect = MagicMock()
+        coordinator.client.connect = AsyncMock(
+            return_value=(False, "Timed out waiting for device ID from " + host)
+        )
 
         result, error = await coordinator.connect()
 
         assert result is False
-        assert error == "Timed out waiting for device ID"
-        coordinator.client.disconnect.assert_called_once()
+        assert "device ID" in error
+        assert coordinator.data.device_id is None
 
 
-async def test_connect_requires_fresh_handshake(hass):
-    """State from a previous session must not satisfy connect().
+async def test_connect_takes_the_device_id_from_the_client(hass):
+    """connect() must not wait for handle_report to run.
 
-    Otherwise a reconnect passes the handshake wait instantly without the
-    device having sent anything, and device_id must survive the failed
-    attempt untouched (entities and the device registry were built from it).
+    The client dispatches the report as a task, so it may not have been
+    scheduled yet when connect() returns, and entities and the device registry
+    are built from device_id.
     """
     host = "192.168.1.100"
-    with patch("custom_components.growcube.coordinator.GrowcubeClient"), \
-            patch("custom_components.growcube.coordinator.DEVICE_ID_TIMEOUT",
-                  0.01):
+    with patch("custom_components.growcube.coordinator.GrowcubeClient"):
         coordinator = GrowcubeDataCoordinator(host, hass)
         coordinator.client.connect = AsyncMock(return_value=(True, ""))
-        coordinator.client.disconnect = MagicMock()
-        coordinator.data.device_id = "growcube_deadbeef"
-        coordinator._device_id_received.set()
+        coordinator.client.device_id = "12345678"
+        coordinator.client.version = "3.6"
 
-        result, _ = await coordinator.connect()
+        result, error = await coordinator.connect()
 
-        assert result is False
-        assert coordinator.data.device_id == "growcube_deadbeef"
+        assert result is True, error
+        assert coordinator.data.device_id == "growcube_bc614e"
+        assert coordinator.data.version == "3.6"
+
+
+async def test_get_device_id_delegates_to_the_client(hass):
+    """The config flow check lives in the client now."""
+    with patch("custom_components.growcube.coordinator.GrowcubeClient") as mock_client_cls:
+        mock_client_cls.get_device_id = AsyncMock(return_value=(True, "12345678"))
+
+        result, value = await GrowcubeDataCoordinator.get_device_id("192.168.1.100")
+
+        assert result is True
+        assert value == "12345678"
 
 
 async def test_reconnect_retries_until_full_handshake_succeeds(hass):
@@ -167,3 +177,37 @@ async def test_disconnect_cancels_reconnect_task(hass):
         assert coordinator.shutting_down is True
         running_task.cancel.assert_called_once()
         coordinator.client.disconnect.assert_called_once()
+
+
+async def test_connect_completes_the_real_handshake(hass, socket_enabled):
+    """End to end against a stand-in device, using the real client.
+
+    Every other test here mocks GrowcubeClient, so nothing would catch the
+    coordinator and the library disagreeing about when device_id is ready.
+    The client sets it before dispatching the report, and connect() reads it
+    from there rather than waiting for handle_report to be scheduled.
+    """
+    async def handle_device(reader, writer):
+        writer.write(GrowcubeMessage.to_bytes(24, "3.6@12345678"))
+        await writer.drain()
+        # Returns once the coordinator closes its end
+        await reader.read()
+        writer.close()
+
+    server = await asyncio.start_server(handle_device, "127.0.0.1", 0)
+    coordinator = None
+    try:
+        coordinator = GrowcubeDataCoordinator("127.0.0.1", hass)
+        coordinator.client.port = server.sockets[0].getsockname()[1]
+
+        result, error = await coordinator.connect()
+
+        assert result is True, error
+        assert coordinator.data.device_id == "growcube_bc614e"
+        assert coordinator.data.version == "3.6"
+    finally:
+        if coordinator is not None:
+            coordinator.disconnect()
+        server.close()
+        await server.wait_closed()
+        await hass.async_block_till_done()

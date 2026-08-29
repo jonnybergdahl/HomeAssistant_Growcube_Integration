@@ -27,10 +27,6 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-# Seconds to wait after connecting for the device to send its
-# DeviceVersionGrowcubeReport before the connection counts as failed.
-DEVICE_ID_TIMEOUT = 5
-
 
 from dataclasses import dataclass, field
 
@@ -65,7 +61,6 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator[GrowcubeData]):
         self.data = GrowcubeData()
         self.shutting_down = False
         self._reconnect_task: Optional[asyncio.Task] = None
-        self._device_id_received = asyncio.Event()
 
     def set_device_id(self, device_id: str) -> None:
         id_str = hex(int(device_id))[2:]
@@ -80,23 +75,18 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator[GrowcubeData]):
         self.async_set_updated_data(self.data)
 
     async def connect(self) -> Tuple[bool, str]:
+        # The client waits for the device to identify itself, so success here
+        # means a Growcube really answered, and a failed attempt has already
+        # closed its connection. That matters because the device serves a
+        # single TCP client: a leaked connection blocks every later attempt.
         result, error = await self.client.connect()
         if not result:
             return False, error
 
-        # Wait for the device to send back the DeviceVersionGrowcubeReport.
-        # The event is cleared first so a reconnect waits for a report from
-        # this connection instead of passing on one from a previous session.
-        self._device_id_received.clear()
-        try:
-            await asyncio.wait_for(
-                self._device_id_received.wait(), timeout=DEVICE_ID_TIMEOUT
-            )
-        except asyncio.TimeoutError:
-            # The Growcube serves a single TCP client; a connection left open
-            # here would block every future attempt until HA restarts.
-            self.client.disconnect()
-            return False, "Timed out waiting for device ID"
+        # Read straight off the client rather than waiting for handle_report,
+        # which runs in a task that may not have been scheduled yet.
+        self.data.version = self.client.version
+        self.set_device_id(self.client.device_id)
 
         _LOGGER.debug(
             "Growcube device id: %s",
@@ -129,8 +119,9 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator[GrowcubeData]):
                 self.client.disconnect()
 
             result, error = await self.connect()
-            # The client absorbs task cancellation inside connect(), so a
-            # shutdown during the attempt surfaces here instead of raising.
+            # A disconnect() during the attempt cancels this task, which now
+            # raises out of the client. This covers a shutdown that lands
+            # between the awaits, where there is no cancellation to deliver.
             if self.shutting_down:
                 return
             if result:
@@ -147,39 +138,9 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator[GrowcubeData]):
             await asyncio.sleep(10)
 
     @staticmethod
-    async def get_device_id(host: str) -> tuple[bool, str]:
+    async def get_device_id(host: str, timeout: float = 5) -> tuple[bool, str]:
         """This is used in the config flow to check for a valid device"""
-        device_id = ""
-
-        async def _handle_device_id_report(report: GrowcubeReport) -> None:
-            if isinstance(report, DeviceVersionGrowcubeReport):
-                nonlocal device_id
-                device_id = report.device_id
-
-        async def _check_device_id_assigned() -> None:
-            nonlocal device_id
-            while not device_id:
-                await asyncio.sleep(0.1)
-
-        client = GrowcubeClient(
-            host=host,
-            on_message_callback=_handle_device_id_report,
-        )
-        try:
-            result, error = await asyncio.wait_for(client.connect(), timeout=5)
-        except asyncio.TimeoutError:
-            return False, "Timed out connecting to device"
-        if not result:
-            return False, error
-
-        try:
-            await asyncio.wait_for(_check_device_id_assigned(), timeout=5)
-            client.disconnect()
-        except asyncio.TimeoutError:
-            client.disconnect()
-            return False, "Timed out waiting for device ID"
-
-        return True, device_id
+        return await GrowcubeClient.get_device_id(host, timeout=timeout)
 
     async def on_connected(self, host: str) -> None:
         _LOGGER.debug(
@@ -227,7 +188,6 @@ class GrowcubeDataCoordinator(DataUpdateCoordinator[GrowcubeData]):
             )
             self.data.version = report.version
             self.set_device_id(report.device_id)
-            self._device_id_received.set()
             return
         # 20 - RepWaterState
         elif isinstance(report, WaterStateGrowcubeReport):
